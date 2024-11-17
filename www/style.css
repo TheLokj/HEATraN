@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,200..1000;1,200..1000&display=swap');
+
+* {
+  font-family: "Mulish", sans-serif;
+}
+
+h2 {
+	font-weight: bold;
+}
+
+.irs--shiny .irs-bar, .irs--shiny .irs-single, .progress-bar, .option.selected, .dataTables_length.select {
+  border: #7e3535;
+  background: #7e3535;
+}
+
+a {
+	color:#E69F00;
+}
+
+.disabled-button {
+    pointer-events: none;
+    opacity: 0.6;}
+
+.selectize-input.focus {
+	border-color: #E69F00 ;
+	border-width: 0px;
+	box-shadow: #E69F00 0px 0px 0px 2px, rgba(6, 24, 44, 0.65) 0px 4px 6px -1px, rgba(255, 255, 255, 0.08) 0px 1px 0px inset;
+}
+
+body, h2, .main-header .logo {
+  font-family: 'Prompt', sans-serif;
+}
+
+table.dataTable tbody tr.selected td, table.dataTable tbody td.selected {
+      border-top-color: white !important;
+      box-shadow: inset 0 0 0 9999px #384246 !important;
+}
+  
+table.dataTable tbody tr:active td {
+  background-color: #384246 !important;
+  
+}
+
+:root {
+  --dt-row-selected: transparent !important;
+}
+
+table.dataTable tbody tr:hover, table.dataTable tbody tr:hover td {
+  background-color: #4B5458  !important;
+  color: white !important;
+}}
+
