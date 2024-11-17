@@ -21,7 +21,7 @@ HEATraN_theme = create_theme(
 # -----------------------------------------
 # Dashboard creation
 # -----------------------------------------
-dashboardPage(skin="red", header <- dashboardHeader(title=HTML("<b>HEATraN</b>")), 
+dashboardPage(skin="red", header <- dashboardHeader(title=HTML("<b style='font-size:26px'>HEATraN</b>")), 
               
               # -----------------------------------------
               # Sidebar elements
@@ -33,7 +33,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title=HTML("<b>HEATraN</b>")
                 
                 # Allow the user to import csv, tsv, xls and xlsx
                 fileInput("tableInput", 
-                          "Choose a csv/tsv/excel file",
+                          "Import data",
                           accept = c(
                             "text/csv",
                             "text/tsv",
@@ -43,7 +43,6 @@ dashboardPage(skin="red", header <- dashboardHeader(title=HTML("<b>HEATraN</b>")
                             "text/tab-separated-values",
                             ".csv",
                             ".tsv")),
-                
                 
                 selectInput("variable", "Select an organism name:",
                             c("Homo sapiens" = "Hs",
@@ -94,7 +93,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title=HTML("<b>HEATraN</b>")
                               id = "tabset2", height = "500px",
                               htmlOutput("InfoSelect"),
                               sliderInput("pval", "Maximum p-value", min = 0, max = 1, value = 0.05, round=F),
-                              sliderInput("Log2FC", "Minimum absolute log2(foldChange)", min = 0, max = 1, value = 0),
+                              sliderInput("Log2FC", "Minimum absolute log2(FoldChange)", min = 0, max = 1, value = 0),
                               actionButton("SelectAll", "Select all data", icon=icon('search', lib='glyphicon')),
                               actionButton("ResetButton", "Reset selection", icon=icon('refresh', lib='glyphicon')),
                               actionButton("ZoomButton", "Zoom in the selection", icon=icon('zoom-in', lib='glyphicon')),
@@ -124,11 +123,10 @@ dashboardPage(skin="red", header <- dashboardHeader(title=HTML("<b>HEATraN</b>")
                   # Information tab
                   tabItem(tabName = "ABOUT",
                           h2("About"),
-                          HTML("<p><b>HEATran</b> (litteraly <i><b>H</b>yper-<b>E</b>xpression <b>A</b>nalysis <b>T</b>ool <b>ra</b>mpantly developed in <b>N</b>ormandy</i> is a bioinformatics analysis tool dedicated to transcriptomic analysis. 
-                               You can find its last version on its <a style='font-weight: bold;', href='https://github.com/TheLokj/HEATraN'>GitHub</a>.<br/><br/>This tool is a student project developed as part of the Bioinformatics Master of Rouen Normandy University.</p>")
+                          HTML("<p><b>HEATraN</b> (litteraly <i><b>H</b>yper-<b>E</b>xpression <b>A</b>nalysis <b>T</b>ool <b>ra</b>mpantly developed in <b>N</b>ormandy</i> is a bioinformatics analysis tool dedicated to transcriptomic analysis. 
+                               <br/>You can find its last version on its <a style='font-weight: bold;', href='https://github.com/TheLokj/HEATraN'>GitHub</a>.
+                               <br/><br/>This tool is a student project developed as part of the Bioinformatics Master of Rouen Normandy University.</p>")
                   )
-                ),
-                
-              ),
-              
+                )),
+              title="HEATraN"        
 )

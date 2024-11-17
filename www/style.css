@@ -8,19 +8,19 @@ h2 {
 	font-weight: bold;
 }
 
+a {
+	color:#E69F00;
+}
+
 .irs--shiny .irs-bar, .irs--shiny .irs-single, .progress-bar, .option.selected, .dataTables_length.select {
   border: #7e3535;
   background: #7e3535;
 }
 
-a {
-	color:#E69F00;
-}
-
 .disabled-button {
     pointer-events: none;
     opacity: 0.6;}
-
+    
 .selectize-input.focus {
 	border-color: #E69F00 ;
 	border-width: 0px;
@@ -41,12 +41,19 @@ table.dataTable tbody tr:active td {
   
 }
 
-:root {
-  --dt-row-selected: transparent !important;
-}
-
 table.dataTable tbody tr:hover, table.dataTable tbody tr:hover td {
   background-color: #4B5458  !important;
   color: white !important;
 }}
 
+.logo {
+  font-weight: bold;
+}
+
+:root {
+  --dt-row-selected: transparent !important;
+}
+
+p {
+  font-size: 18px;
+}

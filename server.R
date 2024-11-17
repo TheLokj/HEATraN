@@ -66,13 +66,14 @@ function(input, output, session) {
       if (FALSE %in% c(requiredNames %in% colnames(dataToPreprocess))){
         shinyalert(size="s", html = TRUE, "Please select the variables", "Wrong column name", type = "info", confirmButtonCol = "#7e3535",
                    text = tagList(
-                     HTML("Next time, use these names to import direcly the table : <i>GeneName, GeneID, baseMean, Log2FC, pval, padj</i><br>"),
                      selectInput("GeneNameCol", "Gene Name", colnames(dataToPreprocess)),
                      selectInput("GeneIDCol", "Gene ID", colnames(dataToPreprocess)),
                      selectInput("BaseMeanCol", "Base mean", colnames(dataToPreprocess)),
                      selectInput("Log2FCCol", "Log2(FoldChange)", colnames(dataToPreprocess)),
                      selectInput("pvalCol", "p-value", colnames(dataToPreprocess)),
-                     selectInput("padjCol", "Adjusted p-avlue", colnames(dataToPreprocess))),
+                     selectInput("padjCol", "Adjusted p-value", colnames(dataToPreprocess)),
+                     HTML("Next time, use these names to import direcly the table : <i>GeneName, GeneID, baseMean, Log2FC, pval, padj</i><br>"),
+                   ),
                    callbackR = function(finished) { 
                      if(finished) {
                        if (length(unique(c(input$GeneNameCol, input$GeneIDCol, input$BaseMeanCol,input$Log2FCCol,input$pvalCol, input$padjCol)))==6){
@@ -126,7 +127,8 @@ function(input, output, session) {
           scale_color_manual(values=c("FALSE" = "#384246", "TRUE" = "#E69F00")) +
           theme(legend.position = "none") +
           xlab("log2(FoldChange)") +
-          ylab("-log10(p-value)") 
+          ylab("-log10(p-value)") +
+          theme(text = element_text(size = 14))    
         return(plot)})
     
     # -----------------------------------------
@@ -185,7 +187,7 @@ function(input, output, session) {
     output$DownloadTable <- downloadHandler(
       filename = function() { paste(unlist(strsplit(input$tableInput[,1], ".", fixed=T))[1], "_HEATraNtable.csv") },
       content = function(file) {
-        write.csv(processedData(), file)
+        write.csv(processedData()[,-c("selected","minuslog10")], file)
       }
     )
     
@@ -256,10 +258,10 @@ function(input, output, session) {
       }
       else {
         if (is.null(input$plot_brush)){
-          HTML(paste("<b>Current selection</b><br/><i>p-value</i>: [0 ; ", input$pval,"]", "    <br/>    ", "<i>log2FoldChange</i>: ", "[-", input$Log2FC, " ; ", input$Log2FC,"]<br/><br/>", sep=""))
+          HTML(paste("<b>Current selection</b><br/><i>p-value</i>: [0 ; ", input$pval,"]", "    <br/>    ", "<i>log2(FoldChange)</i>: ", "[-", input$Log2FC, " ; ", input$Log2FC,"]<br/><br/>", sep=""))
         }
         else {
-          HTML(paste("<b>Current selection</b><br/><i>p-value</i>: [", format(exp(-input$plot_brush$ymax), scientific=TRUE, digits=3), " ; " , format(exp(-input$plot_brush$ymin), scientific=TRUE, digits=3),"]", "     <br/>    ", "<i>log2FoldChange</i>: ", "[", round(input$plot_brush$xmin, 3), " ; ", round(input$plot_brush$xmax, 3),"]<br/><br/>", sep=""))
+          HTML(paste("<b>Current selection</b><br/><i>p-value</i>: [", format(exp(-input$plot_brush$ymax), scientific=TRUE, digits=3), " ; " , format(exp(-input$plot_brush$ymin), scientific=TRUE, digits=3),"]", "     <br/>    ", "<i>log2(FoldChange)</i>: ", "[", round(input$plot_brush$xmin, 3), " ; ", round(input$plot_brush$xmax, 3),"]<br/><br/>", sep=""))
         }}
     })
     
@@ -267,7 +269,7 @@ function(input, output, session) {
     output$table <- DT::renderDT({
       message("Rendering datatable")
       if (!is.na(preprocessedData()[1,1])){
-        processedData()[processedData()$selected==TRUE,1:7]}
+        processedData()[processedData()$selected==TRUE,-c("selected","minuslog10")]}
       else {
         processedData()
       }})
