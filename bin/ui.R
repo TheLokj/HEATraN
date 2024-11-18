@@ -80,7 +80,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                          click = "plot_click",
                                          dblclick = "plot_dblclick",
                                          hover = "plot_hover",
-                                         brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535")
+                                         brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535")
                               ),
                             ),
                             box(
