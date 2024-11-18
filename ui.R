@@ -2,17 +2,10 @@
 # louison.lesage@univ-rouen.fr
 # Student at Rouen Normandy University
 # University project 2024-2025
-# Last updated : 17/11/2024
-
-library(shiny)
-library(shinydashboard)
-library(shinyalert)
-library(shinyjs)
-library(ggplot2)
-library(fresh)
+# Last updated : 18/11/2024
 
 # Theme definition
-HEATraN_theme = create_theme(
+HEATraN_theme <- create_theme(
   adminlte_color(
     red = "#7e3535"
   )
@@ -21,7 +14,7 @@ HEATraN_theme = create_theme(
 # -----------------------------------------
 # Dashboard creation
 # -----------------------------------------
-dashboardPage(skin="red", header <- dashboardHeader(title=HTML("<b style='font-size:26px'>HEATraN</b>")), 
+dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-size:26px; color:#ebb233; font-weight:900'>HEATraN</b>")), 
               
               # -----------------------------------------
               # Sidebar elements
@@ -123,10 +116,10 @@ dashboardPage(skin="red", header <- dashboardHeader(title=HTML("<b style='font-s
                   # Information tab
                   tabItem(tabName = "ABOUT",
                           h2("About"),
-                          HTML("<p><b>HEATraN</b> (litteraly <i><b>H</b>yper-<b>E</b>xpression <b>A</b>nalysis <b>T</b>ool <b>ra</b>mpantly developed in <b>N</b>ormandy</i> is a bioinformatics analysis tool dedicated to transcriptomic analysis. 
-                               <br/>You can find its last version on its <a style='font-weight: bold;', href='https://github.com/TheLokj/HEATraN'>GitHub</a>.
-                               <br/><br/>This tool is a student project developed as part of the Bioinformatics Master of Rouen Normandy University.</p>")
-                  )
+                          HTML("<p><b>HEATraN</b> (litteraly <i><b>H</b>yper-<b>E</b>xpression <b>A</b>nalysis <b>T</b>ool <b>ra</b>mpantly developed in <b>N</b>ormandy</i>) is a bioinformatics analysis tool dedicated to transcriptomic analysis. It was developed as part of a student project in the Bioinformatics Master of Rouen Normandy University.</p>
+                               <br/><img src='logo.png' class='center' width='512' alt='HEATraN logo'>
+                               <br/><p>You can find its last version on its <a style='font-weight: bold;', href='https://github.com/TheLokj/HEATraN'>GitHub</a>.<br/></p>
+                               <i style='text-align:right'> Current version : 0.2.0-a.2.</i>"))
                 )),
               title="HEATraN"        
 )

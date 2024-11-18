@@ -9,7 +9,11 @@ h2 {
 }
 
 a {
-	color:#E69F00;
+	color:#7e3535;
+}
+
+a:hover {
+  color:#E69F00;
 }
 
 .irs--shiny .irs-bar, .irs--shiny .irs-single, .progress-bar, .option.selected, .dataTables_length.select {
@@ -25,6 +29,16 @@ a {
 	border-color: #E69F00 ;
 	border-width: 0px;
 	box-shadow: #E69F00 0px 0px 0px 2px, rgba(6, 24, 44, 0.65) 0px 4px 6px -1px, rgba(255, 255, 255, 0.08) 0px 1px 0px inset;
+}
+
+.center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.box {
+  border-top: 3px solid #D8C2C2  !important;
 }
 
 body, h2, .main-header .logo {

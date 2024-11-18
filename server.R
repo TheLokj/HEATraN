@@ -2,22 +2,13 @@
 # louison.lesage@univ-rouen.fr
 # Student at Rouen Normandy University
 # University project 2024-2025
-# Last updated : 17/11/2024
+# Last updated : 18/11/2024
 
-library(shiny)
-library(readxl)
-library(shinyalert)
-library(ggplot2)
-library(scales)
-library(dplyr)
-library(data.table)
-
-emptyTable = data.frame(Gene=NA, Log2FC=NA, p_value=NA)
-brushInfo = reactiveVal(NULL)
-selectionMode = reactiveVal("None")
+emptyTable <- data.frame(Gene=NA, Log2FC=NA, p_value=NA)
+brushInfo <- reactiveVal(NULL)
+selectionMode <- reactiveVal("None")
 preprocessedData <- reactiveVal(emptyTable)
-
-requiredNames = c("GeneName", "GeneID", "baseMean", "Log2FC", "pval", "padj")
+requiredNames <- c("GeneName", "GeneID", "baseMean", "Log2FC", "pval", "padj")
 
 function(input, output, session) {
 
@@ -33,15 +24,15 @@ function(input, output, session) {
         return(NULL)}
       # After the importation, print the loaded table
       else{
-        inputPath = (input$tableInput)[1,4]
-        format = tail(strsplit(inputPath, ".", fixed=T)[[1]], 1)
+        inputPath <- (input$tableInput)[1,4]
+        format <- tail(strsplit(inputPath, ".", fixed=T)[[1]], 1)
         # Check the file format
         if(format=="csv" || format=="tsv"){
           table = fread(inputPath, sep="auto", h=T)
         } else if(format=="xlsx" | format=="xls"){
           # Inform the user for the excel files
           shinyalert("Excel file imported", "The first datasheet of this file will be imported.", confirmButtonCol = "#7e3535")
-          table = read_excel(inputPath, sheet=1)
+          table <- read_excel(inputPath, sheet=1)
           }
         # Print an alert if the user select another file
         else{
@@ -58,10 +49,10 @@ function(input, output, session) {
       }
     }) |> bindEvent(input$tableInput, ignoreNULL=F, ignoreInit=T)
     
-    # ObserveEvent function preprocessing the data
-    observeEvent (importedData(), {
+    # Observe importation in order to preprocess data
+    observe ({
       message("Preprocessing data")
-      dataToPreprocess = importedData()
+      dataToPreprocess <- importedData()
       # If the required columns aren't found, 
       if (FALSE %in% c(requiredNames %in% colnames(dataToPreprocess))){
         shinyalert(size="s", html = TRUE, "Please select the variables", "Wrong column name", type = "info", confirmButtonCol = "#7e3535",
@@ -92,26 +83,26 @@ function(input, output, session) {
                          }
                        } else {return(FALSE)}})
       } else {
-        dataToPreprocess$minuslog10 = -log(dataToPreprocess$pval)
+        dataToPreprocess$minuslog10 <- -log(dataToPreprocess$pval)
         preprocessedData(dataToPreprocess)
-        selectionMode("Sliders")}})
+        selectionMode("Sliders")}}) |> bindEvent(importedData())
     
     # Reactive function containing the selected points
     processedData <- reactive({
       message("Processing data")
       if (!isTRUE(all.equal(emptyTable, preprocessedData()))){
-        df = preprocessedData()
+        df <- preprocessedData()
         updateSliderInput(session,'Log2FC',max=ceiling(max(abs(df$Log2FC))))
         # Adapt the plot limit when user zoom in it
         if (Zoom()$Zoomed==T){
-          df = df[df$Log2FC>=Zoom()$coords[1]&df$Log2FC<=Zoom()$coords[2]&(-log(df$pval))>=Zoom()$coords[3]&(-log(df$pval))<=Zoom()$coords[4],]
+          df <- df[df$Log2FC>=Zoom()$coords[1]&df$Log2FC<=Zoom()$coords[2]&(-log(df$pval))>=Zoom()$coords[3]&(-log(df$pval))<=Zoom()$coords[4],]
         }
         # Update the selected points according to the selection mode
         if (selectionMode() == "Brush") {
-          df$selected = ifelse(df$GeneName%in%brushedPoints(df, brushInfo()())$GeneName, "TRUE", "FALSE")
+          df$selected <- ifelse(df$GeneName%in%brushedPoints(df, brushInfo()())$GeneName, "TRUE", "FALSE")
           }
         else if (selectionMode() == "Sliders"){
-          df$selected = ifelse((df$Log2FC>input$Log2FC&df$pval<input$pval)|(df$Log2FC<(-input$Log2FC)&df$pval<input$pval), "TRUE", "FALSE")
+          df$selected <- ifelse((df$Log2FC>input$Log2FC&df$pval<input$pval)|(df$Log2FC<(-input$Log2FC)&df$pval<input$pval), "TRUE", "FALSE")
           }
         return(df)
         } else {
@@ -178,21 +169,21 @@ function(input, output, session) {
       
     # Download button event
     output$Download <- downloadHandler(
-      filename = function() { paste(unlist(strsplit(input$tableInput[,1], ".", fixed=T))[1], "_HEATraNplot.pdf") },
-      content = function(file) {
-        ggsave(file, plot())
+      filename <- function() { paste(unlist(strsplit(input$tableInput[,1], ".", fixed=T))[1], "_HEATraNplot.pdf") },
+      content <- function(file) {
+        ggsave(file, plot(), units = "mm", height=210, width=297)
           }
             )
     # Export table event
     output$DownloadTable <- downloadHandler(
-      filename = function() { paste(unlist(strsplit(input$tableInput[,1], ".", fixed=T))[1], "_HEATraNtable.csv") },
-      content = function(file) {
+      filename <- function() { paste(unlist(strsplit(input$tableInput[,1], ".", fixed=T))[1], "_HEATraNtable.csv") },
+      content <- function(file) {
         write.csv(processedData()[,-c("selected","minuslog10")], file)
       }
     )
     
     # Reset button event
-    observeEvent(input$ResetButton,{
+    observe({
       updateSliderInput(session,'Log2FC',value = 1)
       updateSliderInput(session,'pval',value = 0.05)
       if (selectionMode() == "Brush"){
@@ -205,10 +196,10 @@ function(input, output, session) {
           addClass("ZoomButton", "disabled-button")
         }
       }
-    })
+    }) |> bindEvent(input$ResetButton)
     
     # Select All button event
-    observeEvent(input$SelectAll,{
+    observe({
       updateSliderInput(session,'Log2FC',value = 0)
       updateSliderInput(session,'pval',value = 1)
       if (selectionMode() == "Brush"){
@@ -221,20 +212,20 @@ function(input, output, session) {
           addClass("ZoomButton", "disabled-button")
         }
       }
-    })
+    }) |> bindEvent(input$SelectAll)
     
     # Brush use
-    observeEvent(input$plot_brush, {
+    observe({
       message("Brush use")
       selectionMode("Brush")
       brushInfo(reactiveVal(input$plot_brush))
-    })
+    }) |> bindEvent(input$plot_brush)
     
     # Zoom button event
     Zoom = reactive({
       if (selectionMode() == "Brush"){
         message("Zoom")
-        coords = c(brushInfo()()$xmin, brushInfo()()$xmax, brushInfo()()$ymin, brushInfo()()$ymax)
+        coords <- c(brushInfo()()$xmin, brushInfo()()$xmax, brushInfo()()$ymin, brushInfo()()$ymax)
         session$resetBrush("plot_brush")
         brushInfo(NULL)
         selectionMode("Sliders")
@@ -254,7 +245,7 @@ function(input, output, session) {
     # Rendering "Current selection" section 
     output$InfoSelect <- renderUI({
       if (is.null(preprocessedData) || is.na(preprocessedData()[1,1])){
-        HTML(paste("<b style='color:	#FF0000'>Data is needed to make selection</b><br/><br/>", sep=""))
+        HTML(paste("<b style='color:	#FF0000'>Data required for selection</b><br/><br/>", sep=""))
       }
       else {
         if (is.null(input$plot_brush)){
