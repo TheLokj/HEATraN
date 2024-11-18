@@ -27,7 +27,7 @@ You can find its last version on its [GitHub](https://github.com/TheLokj/HEATraN
 ```
 HEATraN/
 ├── app.R                # Main script                
-├── bin/                 # Directory containing secondary scripts
+├── bin/                 # Directory containing scripts
 │   ├── server.R         # Shiny Server script
 │   └── ui.R             # Shiny UI script
 ├── data/                # Data directory

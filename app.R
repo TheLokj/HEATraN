@@ -14,6 +14,4 @@ library(ggplot2) # 3.5.1
 library(readxl) #1.4.3
 library(data.table) #1.16.2
 
-source("ui.R")
-source("server.R")
-shinyApp(ui, server)
+shinyAppDir("bin/")
