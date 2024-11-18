@@ -3,6 +3,7 @@
 # Student at Rouen Normandy University
 # University project 2024-2025
 # Last updated : 18/11/2024
+# HEATraN version 0.2.0-a.4
 
 emptyTable <- data.frame(Gene=NA, Log2FC=NA, p_value=NA)
 brushInfo <- reactiveVal(NULL)
@@ -55,7 +56,7 @@ function(input, output, session) {
       dataToPreprocess <- importedData()
       # If the required columns aren't found, 
       if (FALSE %in% c(requiredNames %in% colnames(dataToPreprocess))){
-        shinyalert(size="s", html = TRUE, "Please select the variables", "Wrong column name", type = "info", confirmButtonCol = "#7e3535",
+        shinyalert(html = TRUE, "Please select the variables", "Wrong column name", type = "info", confirmButtonCol = "#7e3535",
                    text = tagList(
                      selectInput("GeneNameCol", "Gene Name", colnames(dataToPreprocess)),
                      selectInput("GeneIDCol", "Gene ID", colnames(dataToPreprocess)),
@@ -79,7 +80,7 @@ function(input, output, session) {
                          preprocessedData(dataToPreprocess)
                          selectionMode("Sliders")
                          } else {
-                         shinyalert("Incorrect choice!", "You only must choose a column once", type = "error", confirmButtonCol = "#7e3535")
+                         shinyalert("Incorrect choice!", "Each column must be unique.", type = "error", confirmButtonCol = "#7e3535")
                          }
                        } else {return(FALSE)}})
       } else {
@@ -100,8 +101,7 @@ function(input, output, session) {
         # Update the selected points according to the selection mode
         if (selectionMode() == "Brush") {
           df$selected <- ifelse(df$GeneName%in%brushedPoints(df, brushInfo()())$GeneName, "TRUE", "FALSE")
-          }
-        else if (selectionMode() == "Sliders"){
+        } else if (selectionMode() == "Sliders"){
           df$selected <- ifelse((df$Log2FC>input$Log2FC&df$pval<input$pval)|(df$Log2FC<(-input$Log2FC)&df$pval<input$pval), "TRUE", "FALSE")
           }
         return(df)
@@ -127,6 +127,8 @@ function(input, output, session) {
     # -----------------------------------------
       
     # Reactive function controling the selection mode 
+    # As shiny do not allow to disable downloadButton, disable it with shinyJS
+    # Disable also other buttons with shinyJS to standardize rendering
     observeEvent(selectionMode(), {
       message(paste("Selection mode:", selectionMode()))
       if (selectionMode() != "None") {

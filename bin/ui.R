@@ -3,6 +3,7 @@
 # Student at Rouen Normandy University
 # University project 2024-2025
 # Last updated : 18/11/2024
+# HEATraN version 0.2.0-a.4
 
 # Theme definition
 HEATraN_theme <- create_theme(
@@ -24,7 +25,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                 sidebarMenu(
                   menuItem("Home", tabName = "HOME", icon = icon("home"))),
                 
-                # Allow the user to import csv, tsv, xls and xlsx
+                # File importation: csv, tsv, xls and xlsx
                 fileInput("tableInput", 
                           "Import data",
                           accept = c(
@@ -37,10 +38,12 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                             ".csv",
                             ".tsv")),
                 
+                # Reference organism selection
                 selectInput("variable", "Select an organism name:",
                             c("Homo sapiens" = "Hs",
                               "Mus musculus" = "Mm")),
                 
+                # Menu
                 sidebarMenu(
                   menuItem("Whole Data Inspection", icon = icon('eye-open', lib='glyphicon'), tabName = "WDI"),
                   menuItem("GO Term Enrichment", icon = icon('text-background', lib='glyphicon'), tabName = "GO"),
@@ -64,7 +67,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                           p("Click on the Whole Data Inspection menu to access to the second model!"),
                   ),
                   
-                  #First model tab with the request ui 
+                  # Whole Data Inspection tab
                   tabItem(tabName = "WDI",
                           h2("Whole Data Inspection"),
                           
@@ -81,6 +84,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                               ),
                             ),
                             box(
+                              # Use ShinyJS to allow deactivation of download button
                               shinyjs::useShinyjs(),
                               title = HTML("<b>Selection options</b>"), side = "right",
                               id = "tabset2", height = "500px",
@@ -104,11 +108,12 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                             ))
                   ),
                   
-                  
+                  # GO Term Enrichment tab, WIP
                   tabItem(tabName = "GO",
                           h2("GO Term Enrichment")
                   ),
                   
+                  # Pathways Enrichment tab, WIP
                   tabItem(tabName = "PATH",
                           h2("Pathways Enrichment")
                   ),
@@ -119,7 +124,10 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                           HTML("<p><b>HEATraN</b> (litteraly <i><b>H</b>yper-<b>E</b>xpression <b>A</b>nalysis <b>T</b>ool <b>ra</b>mpantly developed in <b>N</b>ormandy</i>) is a bioinformatics analysis tool dedicated to transcriptomic analysis. It was developed as part of a student project in the Bioinformatics Master of Rouen Normandy University.</p>
                                <br/><img src='logo.png' class='center' width='512' alt='HEATraN logo'>
                                <br/><p>You can find its last version on its <a style='font-weight: bold;', href='https://github.com/TheLokj/HEATraN'>GitHub</a>.<br/></p>
-                               <i style='text-align:right'> Current version : 0.2.0-a.3.</i>"))
+                               <i style='text-align:right'> Current version : 0.2.0-a.4.</i>")
+                  )
                 )),
+              
+              #Webpage title
               title="HEATraN"        
 )
