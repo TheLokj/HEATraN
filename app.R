@@ -3,7 +3,7 @@
 # Student at Rouen Normandy University
 # University project 2024-2025
 # Last updated : 18/11/2024
-# HEATraN version 0.2.0-a.4
+# HEATraN version 0.2.0-a.5
 
 # R version : 4.3.3
 library(shiny) #1.9.1

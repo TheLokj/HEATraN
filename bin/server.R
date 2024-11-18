@@ -3,7 +3,7 @@
 # Student at Rouen Normandy University
 # University project 2024-2025
 # Last updated : 18/11/2024
-# HEATraN version 0.2.0-a.4
+# HEATraN version 0.2.0-a.5
 
 emptyTable <- data.frame(Gene=NA, Log2FC=NA, p_value=NA)
 brushInfo <- reactiveVal(NULL)
@@ -100,7 +100,7 @@ function(input, output, session) {
         }
         # Update the selected points according to the selection mode
         if (selectionMode() == "Brush") {
-          df$selected <- ifelse(df$GeneName%in%brushedPoints(df, brushInfo()())$GeneName, "TRUE", "FALSE")
+          df$selected <- ifelse(df$GeneID%in%brushedPoints(df, brushInfo()())$GeneID, "TRUE", "FALSE")
         } else if (selectionMode() == "Sliders"){
           df$selected <- ifelse((df$Log2FC>input$Log2FC&df$pval<input$pval)|(df$Log2FC<(-input$Log2FC)&df$pval<input$pval), "TRUE", "FALSE")
           }
