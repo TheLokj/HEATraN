@@ -110,13 +110,41 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                   
                   # GO Term Enrichment tab, WIP
                   tabItem(tabName = "GO",
-                          h2("GO Term Enrichment")
+                          h2("GO Term Enrichment"),
+                          fluidRow (
+                            box(
+                              title = HTML("<i>Analysis parameters</i>"),
+                              id = "boxPathwayparamers", width = 12,
+                              sliderInput("pval", "Select an adjusted p-value cutoff", min = 0, max = 1, value = 0.05, round=F),
+                              checkboxGroupInput("analysisMethodChoice", "Analysis method", choices = c("Over Representation Analysis (ORA)", "Gene Set Enrichment Analysis (GSEA)"), selected = NULL,
+                                                 inline = TRUE, width = NULL, choiceNames = NULL, choiceValues = NULL),
+                              checkboxGroupInput("oraChoice", "Interest for ORA method", choices = c("Under expressed DEG", "Over expressed DEG"), selected = NULL,
+                                                 inline = TRUE, width = NULL, choiceNames = NULL, choiceValues = NULL),
+                              selectInput("inputGO","Select a GO annotation",c("Biological process", "Molecular function", "Cellular component")),
+                              numericInput("goLevel", "GO level of precision (from 1 to 7)", min = 1, max = 7, value = 1),
+                              actionButton("analysisPathwayButton", "Start analysis", icon=icon('text-background', lib='glyphicon')),
+                            ),
+                          ),
                   ),
                   
                   # Pathways Enrichment tab, WIP
                   tabItem(tabName = "PATH",
-                          h2("Pathways Enrichment")
-                  ),
+                          h2("Pathways Enrichment"),
+                          fluidRow (
+                            box(
+                              title = HTML("<i>Analysis parameters</i>"),
+                              id = "boxPathwayparamers", width = 12,
+                              sliderInput("pval", "Select an adjusted p-value cutoff", min = 0, max = 1, value = 0.05, round=F),
+                              checkboxGroupInput("analysisMethodChoice", "Analysis method", choices = c("Over Representation Analysis (ORA)", "Gene Set Enrichment Analysis (GSEA)"), selected = NULL,
+                                                 inline = TRUE, width = NULL, choiceNames = NULL, choiceValues = NULL),
+                              checkboxGroupInput("oraChoice", "Interest for ORA method", choices = c("Under expressed DEG", "Over expressed DEG"), selected = NULL,
+                                                 inline = TRUE, width = NULL, choiceNames = NULL, choiceValues = NULL),
+                              radioButtons("dbPathwaychoice", "Database choice", choices = c("Reactome", "KEGG"), selected = NULL,
+                                                 inline = TRUE, width = NULL, choiceNames = NULL,  choiceValues = NULL),
+                              actionButton("analysisPathwayButton", "Start analysis", icon=icon('transfer', lib='glyphicon')),
+                              ),
+                            ),
+                          ),
                   
                   # Information tab
                   tabItem(tabName = "ABOUT",
