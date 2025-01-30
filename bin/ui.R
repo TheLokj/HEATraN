@@ -74,15 +74,20 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                           fluidRow (
                             box(
                               title = HTML("<b>Volcano plot</b>"),
-                              id = "volcanoplot", height = "500px",
+                              id = "volcanoplot", 
+                              height = "500px",
+                              width = 12,  # Add width argument
+                              status = "primary",  # Add status argument
+                              solidHeader = TRUE,  # Add solidHeader argument
                               plotOutput("volcanoPlot", 
                                          height="425px",
                                          click = "plot_click",
                                          dblclick = "plot_dblclick",
                                          hover = "plot_hover",
                                          brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535")
-                              ),
+                              )
                             ),
+                            
                             box(
                               # Use ShinyJS to allow deactivation of download button
                               shinyjs::useShinyjs(),
@@ -110,7 +115,47 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                   
                   # GO Term Enrichment tab, WIP
                   tabItem(tabName = "GO",
-                          h2("GO Term Enrichment")
+                          h2("GO Term Enrichment"),
+                          fluidRow(
+                            box(
+                              title = "GO Analysis Parameters",
+                              width = 4,
+                              selectInput("goOntology", "Ontology Type:", 
+                                          choices = c("Biological Process" = "BP",
+                                                      "Molecular Function" = "MF",
+                                                      "Cellular Component" = "CC")),
+                              numericInput("pvalueCutoff", "P-value Cutoff:", 0.05, min = 0, max = 1, step = 0.01),
+                              numericInput("qvalueCutoff", "Q-value Cutoff:", 0.10, min = 0, max = 1, step = 0.01),
+                              actionButton("runGO", "Run GO Analysis", icon = icon("play"))
+                            ),
+                            box(
+                              title = "Visualization Options",
+                              width = 8,
+                              tabsetPanel(
+                                tabPanel("Word Cloud", 
+                                         sliderInput("maxWords", "Maximum Words:", min = 5, max = 50, value = 25),
+                                         plotOutput("wordcloudPlot", height = "400px")
+                                ),
+                                tabPanel("Bar Plot", 
+                                         sliderInput("topCategories", "Top Categories:", min = 5, max = 30, value = 10),
+                                         plotOutput("goBarplot", height = "400px")
+                                ),
+                                tabPanel("Dot Plot", 
+                                         plotOutput("goDotplot", height = "400px")
+                                ),
+                                tabPanel("Network Plot",
+                                         plotOutput("goNetplot", height = "400px")
+                                )
+                              )
+                            )
+                          ),
+                          fluidRow(
+                            box(
+                              title = "GO Enrichment Results",
+                              width = 12,
+                              DT::DTOutput("goTable")
+                            )
+                          )
                   ),
                   
                   # Pathways Enrichment tab, WIP

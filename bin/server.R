@@ -16,7 +16,7 @@ function(input, output, session) {
     # -----------------------------------------
     # Data processing
     # -----------------------------------------
-  
+
     # Reactive function controlling the imported data
     importedData <- reactive ({
       message("Importing data")
@@ -49,12 +49,12 @@ function(input, output, session) {
         }
       }
     }) |> bindEvent(input$tableInput, ignoreNULL=F, ignoreInit=T)
-    
+
     # Observe importation in order to preprocess data
     observe ({
       message("Preprocessing data")
       dataToPreprocess <- importedData()
-      # If the required columns aren't found, 
+      # If the required columns aren't found,
       if (FALSE %in% c(requiredNames %in% colnames(dataToPreprocess))){
         shinyalert(html = TRUE, "Please select the variables", "Wrong column name", type = "info", confirmButtonCol = "#7e3535",
                    text = tagList(
@@ -66,7 +66,7 @@ function(input, output, session) {
                      selectInput("padjCol", "Adjusted p-value", colnames(dataToPreprocess)),
                      HTML("Next time, use these names to import direcly the table : <i>GeneName, GeneID, baseMean, Log2FC, pval, padj</i><br>"),
                    ),
-                   callbackR = function(finished) { 
+                   callbackR = function(finished) {
                      if(finished) {
                        if (length(unique(c(input$GeneNameCol, input$GeneIDCol, input$BaseMeanCol,input$Log2FCCol,input$pvalCol, input$padjCol)))==6){
                          dataToPreprocess <- importedData()
@@ -87,7 +87,7 @@ function(input, output, session) {
         dataToPreprocess$minuslog10 <- -log(dataToPreprocess$pval)
         preprocessedData(dataToPreprocess)
         selectionMode("Sliders")}}) |> bindEvent(importedData())
-    
+
     # Reactive function containing the selected points
     processedData <- reactive({
       message("Processing data")
@@ -109,7 +109,7 @@ function(input, output, session) {
         return(emptyTable)
       }
     })
-  
+
     # Reactive function building the plot
     plot <- reactive({
       message("Loading plot")
@@ -119,14 +119,14 @@ function(input, output, session) {
           theme(legend.position = "none") +
           xlab("log2(FoldChange)") +
           ylab("-log10(p-value)") +
-          theme(text = element_text(size = 14))    
+          theme(text = element_text(size = 14))
         return(plot)})
-    
+
     # -----------------------------------------
     # User event
     # -----------------------------------------
-      
-    # Reactive function controling the selection mode 
+
+    # Reactive function controling the selection mode
     # As shiny do not allow to disable downloadButton, disable it with shinyJS
     # Disable also other buttons with shinyJS to standardize rendering
     observeEvent(selectionMode(), {
@@ -168,7 +168,7 @@ function(input, output, session) {
         addClass("Download", "disabled-button")
         addClass("DownloadTable", "disabled-button")
       }})
-      
+
     # Download button event
     output$Download <- downloadHandler(
       filename <- function() { paste(unlist(strsplit(input$tableInput[,1], ".", fixed=T))[1], "_HEATraNplot.pdf") },
@@ -183,7 +183,7 @@ function(input, output, session) {
         write.csv(processedData()[,-c("selected","minuslog10")], file)
       }
     )
-    
+
     # Reset button event
     observe({
       updateSliderInput(session,'Log2FC',value = 1)
@@ -199,7 +199,7 @@ function(input, output, session) {
         }
       }
     }) |> bindEvent(input$ResetButton)
-    
+
     # Select All button event
     observe({
       updateSliderInput(session,'Log2FC',value = 0)
@@ -215,14 +215,14 @@ function(input, output, session) {
         }
       }
     }) |> bindEvent(input$SelectAll)
-    
+
     # Brush use
     observe({
       message("Brush use")
       selectionMode("Brush")
       brushInfo(reactiveVal(input$plot_brush))
     }) |> bindEvent(input$plot_brush)
-    
+
     # Zoom button event
     Zoom = reactive({
       if (selectionMode() == "Brush"){
@@ -239,12 +239,12 @@ function(input, output, session) {
         return(list(Zoomed=F, coords=NULL))
       }
     }) |> bindEvent(input$ZoomButton, ignoreNULL=F)
-    
+
     # -----------------------------------------
-    # UI output 
+    # UI output
     # -----------------------------------------
 
-    # Rendering "Current selection" section 
+    # Rendering "Current selection" section
     output$InfoSelect <- renderUI({
       if (is.null(preprocessedData) || is.na(preprocessedData()[1,1])){
         HTML(paste("<b style='color:	#FF0000'>Data required for selection</b><br/><br/>", sep=""))
@@ -257,7 +257,7 @@ function(input, output, session) {
           HTML(paste("<b>Current selection</b><br/><i>p-value</i>: [", format(exp(-input$plot_brush$ymax), scientific=TRUE, digits=3), " ; " , format(exp(-input$plot_brush$ymin), scientific=TRUE, digits=3),"]", "     <br/>    ", "<i>log2(FoldChange)</i>: ", "[", round(input$plot_brush$xmin, 3), " ; ", round(input$plot_brush$xmax, 3),"]<br/><br/>", sep=""))
         }}
     })
-    
+
     # Rendering datatable
     output$table <- DT::renderDT({
       message("Rendering datatable")
@@ -266,7 +266,7 @@ function(input, output, session) {
       else {
         processedData()
       }})
-    
+
     # Rendering volcano plot
     output$volcanoPlot <- renderPlot ({
       message("Rendering volcano plot")
@@ -275,5 +275,108 @@ function(input, output, session) {
       else {
       }
     })
+
+    #######added this :
+    # GO Analysis reactive values
+    goResults <- reactiveVal(NULL)
+    observeEvent(input$runGO, {
+      req(preprocessedData())
+      withProgress(message = 'Running GO analysis...', {
+        # Prepare gene list
+        df <- preprocessedData()
+        print(head(df))  
+        print("la langeur de df : \n")
+        print(dim(df))
+        original_gene_list <- df$Log2FC
+        names(original_gene_list) <- df$GeneID
+        gene_list<-na.omit(original_gene_list)
+        #sort the list in decreasing order (required for clusterProfiler)
+        gene_list = sort(gene_list, decreasing = TRUE)
+        #Exctract significant results (padj < 0.05)
+        sig_genes_df = subset(df, padj < 0.05)
+        #From significant results, we want to filter on log2fold change
+        genes <- sig_genes_df$Log2FC
+        #Name the vector
+        names(genes) <- sig_genes_df$GeneID
+        #omit NA values
+        genes <- na.omit(genes)
+        head(genes)
+        # 
+        # filter on min log2fold change (log2FoldChange > 2)
+        # 
+        # genes <- names(genes)[abs(genes) > 2]
+        # length(genes)
+        
+        #Ontology Options: [“BP”, “MF”, “CC”]
+        
+        organism <- "org.Mm.eg.db"
+        genes <- names(genes)
+        universe <- names(gene_list)
+        # # Run enrichGO
+        go_enrich <- enrichGO(
+          gene = genes,
+          universe = universe,
+          OrgDb = organism,
+          keyType = "ENSEMBL",
+          readable = TRUE,
+          ont = "BP",
+          pvalueCutoff = 0.05,
+          qvalueCutoff = 0.10
+        )
+
+        print(head(go_enrich)) 
+        # # Store results
+         goResults(go_enrich)
+      })
+    })
+
+    # Render word cloud
+    output$wordcloudPlot <- renderPlot({
+      req(goResults())
+      go_enrich <- goResults()
+      wcdf <- read.table(text = go_enrich$GeneRatio, sep = "/")[1]
+      wcdf$term <- go_enrich[,2]
+      wcdf$term <- substr(wcdf$term, 1, 25)
+
+      wordcloud(
+        words = wcdf$term,
+        freq = wcdf$V1,
+        scale = c(4, 0.1),
+        colors = brewer.pal(8, "Dark2"),
+        max.words = input$maxWords
+      )
+    })
+
+    # Render bar plot
+    output$goBarplot <- renderPlot({
+      req(goResults())
+      barplot(goResults(),
+              drop = TRUE,
+              showCategory = input$topCategories,
+              title = "GO Biological Pathways",
+              font.size = 8)
+    })
+
+    # Render dot plot
+    output$goDotplot <- renderPlot({
+      req(goResults())
+      dotplot(goResults())
+    })
+
+    # Render network plot
+    output$goNetplot <- renderPlot({
+      req(goResults())
+      go_enrich <- pairwise_termsim(go_enrich)
+      emapplot(go_enrich)
+      emapplot(go_enrich, layout = "kk", showCategory = 15)
       
+      emapplot(goResults(), layout = "kk", showCategory = 15)
+    })
+
+    # Render results table
+    output$goTable <- DT::renderDT({
+      req(goResults())
+      as.data.frame(goResults())
+    })
+
 }
