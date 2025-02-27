@@ -14,5 +14,6 @@ library(fresh) #0.2.1
 library(ggplot2) # 3.5.1
 library(readxl) #1.4.3
 library(data.table) #1.16.2
+library(DT)
 
 shinyAppDir("bin/")

@@ -11,15 +11,14 @@ library(pathview)
 library(DOSE)
 library(enrichplot)
 library(dplyr)
+setwd("~/Bureau/Fac/Rshiny/HEATraN")
 
 # Global variables definition
-pAdjustMethod = "BH"
+GeneID = read.table("~/Bureau/Fac/Rshiny/HEATraN/data/exemple.csv", sep=";", h=T)$GeneID
+Log2FC = read.table("~/Bureau/Fac/Rshiny/HEATraN/data/exemple.csv", sep=";", h=T)$Log2FC
 organism = "Mus musculus"
-pathwayMethod = "KEGG"
-geneID = read.table("data/exemple.csv", sep=";", h=T)$ID
-log2FC = read.table("data/exemple.csv", sep=";", h=T)$log2FC
-data = as.data.frame(cbind(geneID, log2FC))
-data$log2FC = as.numeric(data$log2FC)
+data = as.data.frame(cbind(GeneID, Log2FC))
+data$Log2FC = as.numeric(data$Log2FC)
 
 # Organism dataframe
 orgs = data.frame(organism="Homo sapiens", db="org.Hs.eg.db", commonName="human", TLname="hsa")
@@ -27,10 +26,14 @@ orgs = rbind(orgs, data.frame(organism="Mus musculus", db="org.Mm.eg.db", common
 
 # Functions
 rankFC = function(data, colId){
-  rankedVec = data$log2FC
-  names(rankedVec) = data[,colId]
-  rankedVec = sort(rankedVec, decreasing=T)
+  rankedVec = data$Log2FC
+  names(rankedVec) = data[[colId]]
   rankedVec = rankedVec[!is.na(names(rankedVec))]
+  rankedVec = tapply(rankedVec, names(rankedVec), mean)
+  rankedVec = sort(rankedVec, decreasing=T)
+  namesrV = names(rankedVec)
+  rankedVec = as.numeric(rankedVec)
+  names(rankedVec) = namesrV
   return(rankedVec)
 }
 
@@ -41,94 +44,138 @@ getKEGGpathway = function(geneList, pathwayID, organism, local=T){
     pathview(gene.data  = geneList, pathway.id = pathwayID, species = organism, kegg.dir=".")
     setwd(wd)
     } else {
-    browseKEGG(gsea$enrichment, pathwayID)
+    browseKEGG(geneList, pathwayID)
   } 
 }
     
+getReactomePathway = function(rankedLog2FC, pathwayDesc, organism){
+  print(pathwayDesc)
+  print(rankedLog2FC)
+  for (i in 1:length(pathwayDesc)){
+    name = paste(gsub("[\\\\ ]", "_", pathwayDesc[i]),".png",sep="")
+    if (! name %in% list.files("./out/")){
+      try(ggplot2::ggsave(paste(getwd(), "/out/", name, sep=""), viewPathway(pathwayDesc[i], 
+                                                                          organism="mouse",
+                                                                          readable = TRUE, 
+                                                                          foldChange = rankedLog2FC[names(table(names(rankedLog2FC))[table(names(rankedLog2FC))==1])])))}
+    else {
+      message(paste(name, "already saved."))
+    }}
+  
+}
+
 preprocessPathway = function(data, organism, DB){
   if (DB == "KEGG"){
     keggOrganism = as.character(search_kegg_organism(organism, by='scientific_name')['kegg_code'])
-    entrezIds = bitr(data$geneID, fromType = "ENSEMBL", toType = "ENTREZID", OrgDb = orgs[orgs$organism==organism, "db"], drop=F)
-    keggIds = bitr_kegg(entrezIds$ENTREZID, fromType="ncbi-geneid", toType="kegg", organism=keggOrganism, drop=F)
-    colnames(entrezIds) = c("geneID", "ENTREZID")
+    entrezIds = bitr(data$GeneID, fromType = "ENSEMBL", toType = "ENTREZID", OrgDb = orgs[orgs$organism==organism, "db"], drop=T)
+    keggIds = bitr_kegg(entrezIds$ENTREZID, fromType="ncbi-geneid", toType="kegg", organism=keggOrganism, drop=T)
+    colnames(entrezIds) = c("GeneID", "ENTREZID")
     colnames(keggIds) = c("ENTREZID", "KeggIds")
     getids = merge(entrezIds, keggIds)
     data = merge(data, getids)
     return(list(organism=keggOrganism, genes=data, ranked=rankFC(data, "KeggIds")))
   } else if (DB == "Reactome"){
-    entrezIds = bitr(data$geneID, fromType = "ENSEMBL", toType = "ENTREZID", OrgDb = orgs[orgs$organism==organism, "db"], drop=F)
-    colnames(entrezIds) = c("geneID", "ENTREZID")
+    entrezIds = bitr(data$GeneID, fromType = "ENSEMBL", toType = "ENTREZID", OrgDb = orgs[orgs$organism==organism, "db"], drop=T)
+    colnames(entrezIds) = c("GeneID", "ENTREZID")
     data = merge(data, entrezIds)
-    print(data)
     return(list(organism=organism, genes=data, ranked=rankFC(data, "ENTREZID")))
   }
 }
 
-pathway = function(data, organism, DB, analysis=c("ORA", "GSEA"), pAdjustMethod="BH", threshold=1, oraInterest = "both"){
-  if ("ORA" %in% analysis){
+pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", threshold=1, oraInterest = c("up", "down"), pval= 0.05){
+  parameters = list(organism=organism, DB=DB, analysis=analysis, pAdjustMethod=pAdjustMethod, threshold=threshold, oraInterest=oraInterest, pval=pval)
+  if (analysis == "ORA"){
     message("Doing an over representation analysis on differentially expressed genes regarding their pathway.")
     #--- Preprocess ---#
-    if (oraInterest == "up") {
-      message(paste("Analyzing DEG with a log2FC >", threshold, ".", sep=""))
-      data = data[data$log2FC>threshold,]}
-    else if (oraInterest =="down"){
-      message(paste("Analyzing DEG with a log2FC <", threshold, ".", sep=""))
-      data = data[data$log2FC<threshold,]
-    } else {
-      message(paste("Analyzing DEG with a log2FC <", threshold, " and >", threshold, ".", sep=""))
-      data = data[abs(data$log2FC)>threshold,]}
+    if ("up" %in% oraInterest & "down" %in% oraInterest) {
+      message(paste("Analyzing DEG with a Log2FC <", threshold, " and >", threshold, ".", sep=""))
+      data = data[abs(data$Log2FC)>threshold,]}
+    else if (oraInterest == "down"){
+      message(paste("Analyzing DEG with a Log2FC <", threshold, ".", sep=""))
+      data = data[data$Log2FC<threshold,]}
+    else if (oraInterest == "up"){
+      message(paste("Analyzing DEG with a Log2FC >", threshold, ".", sep=""))
+      data = data[data$Log2FC>threshold,]}
     data = preprocessPathway(data, organism, DB)
     genesList = names(data$ranked)[abs(data$ranked)]
     #--- Analysis ---#
     if (DB == "KEGG"){
-      enrichmentORA = enrichKEGG(genesList, organism=orgs[orgs$organism==organism, "commonName"], universe=data, pvalueCutoff = 0.05)
+      enrichment = enrichKEGG(genesList, organism=orgs[orgs$organism==organism, "TLname"], universe=data$entrezIds, pvalueCutoff = pval)
+      getKEGGpathway(enrichment@gene, enrichment$ID, organism=orgs[orgs$organism==organism, "TLname"], local=T)
     }
     if (DB == "Reactome"){
-      enrichmentORA = enrichPathway(genesList, organism=orgs[orgs$organism==organism, "commonName"], universe=data, pvalueCutoff = 1)
+      enrichment = enrichPathway(genesList, organism=orgs[orgs$organism==organism, "commonName"], universe=data$entrezIds, pvalueCutoff = pval)
+      print(enrichment)
+      getReactomePathway(data$ranked, enrichment$Description, organism=organism)
+       }
+    return(list(enrichment=enrichment, processedData = data, parameters=parameters))
     }
-    #--- Plotting ---#
-    print(barplot(enrichmentORA, showCategory=20))
-    print(dotplot(enrichmentORA, showCategory=30) + ggtitle("Dotplot for ORA"))
-    return(enrichmentORA)
-    }
-  if ("GSEA" %in% analysis){
+  if (analysis == "GSEA"){
     message("Doing Gene Set Enrichment Analysis on differentially expressed genes regarding their pathway.")
     #--- Preprocess ---#
     data = preprocessPathway(data, organism, DB)
     #--- Analysis ---#
     if (DB == "KEGG"){
-      enrichmentGSEA = gseKEGG(data$ranked, organism=orgs[orgs$organism==organism, "TLname"], 
-                                               pvalueCutoff = 0.05,
+      enrichment = gseKEGG(data$ranked, organism=orgs[orgs$organism==organism, "TLname"], 
+                                               pvalueCutoff = pval,
                                                minGSSize    = 10, #Previously 120
-                                               verbose      = FALSE)}
-    
+                                               verbose      = FALSE)
+      getKEGGpathway(enrichment$core_enrichment, enrichment$ID, organism=orgs[orgs$organism==organism, "TLname"], local=T)}
     if (DB == "Reactome"){
-      enrichmentGSEA = gsePathway(data$ranked, 
+      enrichment = gsePathway(data$ranked, 
                                organism=orgs[orgs$organism==organism, "commonName"],
-                               pvalueCutoff = 1,
+                               pvalueCutoff = pval,
                                minGSSize    = 10, #Previously 120
-                               verbose      = FALSE)}
-    #--- Plotting ---#
-    gseaplot = gseaplot(enrichmentGSEA, 1)
-    #gseabarplot = barplot(enrichmentGSEA, showCategory=20)
-    gseadotplot = dotplot(enrichmentGSEA, showCategory=30) + ggtitle("dotplot for GSEA")
-    return(list(enrichment=enrichmentGSEA, plot=list(plot=gseaplot, dotplot=gseadotplot)))
+                               verbose      = FALSE)
+    getReactomePathway(data$ranked, enrichment$Description, organism=organism)}
+    return(list(enrichment=enrichment, processedData = data, parameters=parameters))
     }
 }
 
 
+#test = pathway(data, organism, DB="Reactome")
+#
+#ggplot(test$enrichment, aes(x = reorder(Description, setSize), y = setSize, fill=p.adjust)) +
+# geom_bar(stat = "identity") +
+#  coord_flip() +  # Inverser les axes pour une meilleure lisibilité
+    # labs(title = "Résultats de l'enrichissement GSEA",
+#      x = "Voies",
+       #      y = "Set size") +
+#  theme_minimal() +
+# scale_fill_gradient2(low = "royalblue", mid="royalblue", high = "red3")
 
-gsea = pathway(data, organism, DB="Reactome", analysis="GSEA")
 
-print(gsea$plot$plot)
-print(gsea$plot$dotplot)
-print(gsea$enrichment)
-print(as.data.frame(gsea$enrichment))
 
-#getKEGGpathway(gsea$enrichment$core_enrichment, gsea$enrichment$ID, organism=orgs[orgs$organism==organism, "TLname"], local=T)
 
-ora = pathway(data, organism, DB="Reactome", analysis="ORA")
+#cnetplot(
+#  x = test$enrichment, category = "Description",  gene = "core_enrichment", pvalue = "p.adjust",  foldchange = test$processedData$ranked,  # Si vous avez des fold changes, vous pouvez les inclure ici
+# pointSize = 3,
+# labelSize = 3)
 
-convertID = function(id){
+
+#geneSetsSignificant = test$enrichment@geneSets[names(test$enrichment@geneSets)%in%test$enrichment$ID]
+
+#geneSetsSignificant = lapply(geneSetsSignificant, as.vector)
+
+#gene_sets <- data.frame(geneSetsSignificant) %>%
+# select(geneID, Description) %>%
+# table() > 0
+
+
+#print(gsea$plot$plot)
+##print(gsea$plot$dotplot)
+#print(gsea$enrichment)
+#print(as.data.frame(gsea$enrichment))
+
+
+#Plots = function(id){
+  #--- Plotting ---#
+  # print(barplot(enrichmentORA, showCategory=20))
+  # print(dotplot(enrichmentORA, showCategory=30) + ggtitle("Dotplot for ORA"))
+  #--- Plotting ---#
+  # gseaplot = gseaplot(enrichmentGSEA, 1)
+  # gseabarplot = barplot(enrichmentGSEA, showCategory=20)
+  # gseadotplot = dotplot(enrichmentGSEA, showCategory=30) + ggtitle("dotplot for GSEA")
   
-}
+#}
+

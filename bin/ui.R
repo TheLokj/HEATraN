@@ -23,7 +23,8 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
               sidebar <- dashboardSidebar(
                 
                 sidebarMenu(
-                  menuItem("Home", tabName = "HOME", icon = icon("home"))),
+                  menuItem("Home", tabName = "HOME", icon = icon("home")),
+                  
                 
                 # File importation: csv, tsv, xls and xlsx
                 fileInput("tableInput", 
@@ -47,10 +48,12 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                 sidebarMenu(
                   menuItem("Whole Data Inspection", icon = icon('eye-open', lib='glyphicon'), tabName = "WDI"),
                   menuItem("GO Term Enrichment", icon = icon('text-background', lib='glyphicon'), tabName = "GO"),
-                  menuItem("Pathways Enrichment", icon = icon('transfer', lib='glyphicon'),  tabName = "PATH"),
+                  menuItem("Pathways Enrichment", icon = icon('transfer', lib='glyphicon'),  tabName = "PATH", 
+                           menuSubItem("Analysis", tabName = "PATH_analysis", icon = icon('flash', lib='glyphicon')),
+                           menuSubItem("Results", tabName = "PATH_results", icon = icon('search', lib='glyphicon'))),
                   menuItem("About", icon = icon('info-sign', lib='glyphicon'), tabName = "ABOUT")
-                )
-              ),
+                ))
+                ),
               
               # -----------------------------------------
               # Body tabs 
@@ -116,35 +119,93 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                               title = HTML("<i>Analysis parameters</i>"),
                               id = "boxPathwayparamers", width = 12,
                               sliderInput("pval", "Select an adjusted p-value cutoff", min = 0, max = 1, value = 0.05, round=F),
-                              checkboxGroupInput("analysisMethodChoice", "Analysis method", choices = c("Over Representation Analysis (ORA)", "Gene Set Enrichment Analysis (GSEA)"), selected = NULL,
+                              checkboxGroupInput("analysisMethodChoiceGO", "Analysis method", choices = c("Over Representation Analysis (ORA)", "Gene Set Enrichment Analysis (GSEA)"), selected = NULL,
                                                  inline = TRUE, width = NULL, choiceNames = NULL, choiceValues = NULL),
-                              checkboxGroupInput("oraChoice", "Interest for ORA method", choices = c("Under expressed DEG", "Over expressed DEG"), selected = NULL,
+                              checkboxGroupInput("oraChoiceGO", "Interest for ORA method", choices = c("Under expressed DEG", "Over expressed DEG"), selected = NULL,
                                                  inline = TRUE, width = NULL, choiceNames = NULL, choiceValues = NULL),
                               selectInput("inputGO","Select a GO annotation",c("Biological process", "Molecular function", "Cellular component")),
                               numericInput("goLevel", "GO level of precision (from 1 to 7)", min = 1, max = 7, value = 1),
-                              actionButton("analysisPathwayButton", "Start analysis", icon=icon('text-background', lib='glyphicon')),
+                              actionButton("analysisGOButton", "Start analysis", icon=icon('text-background', lib='glyphicon')),
                             ),
                           ),
                   ),
                   
                   # Pathways Enrichment tab, WIP
-                  tabItem(tabName = "PATH",
-                          h2("Pathways Enrichment"),
+                  tabItem(tabName = "PATH_analysis", h2("Pathway enrichment"),
+                                     fluidRow (
+                                       box(
+                                         title = HTML("<i>Analysis parameters</i>"),
+                                         id = "boxPathwayparamers", width = 12,
+                                         sliderInput("pvalPathway", "Select an adjusted p-value cutoff", min = 0, max = 1, value = 0.05, round=F),
+                                         radioButtons("analysisMethodChoice", "Analysis method", choices = list("Over Representation Analysis (ORA)"="ORA", "Gene Set Enrichment Analysis (GSEA)"="GSEA"), selected = NULL,
+                                                      inline = TRUE, width = NULL),
+                                         checkboxGroupInput("oraChoice", "Interest for ORA method", choices = list("Under expressed DEG"="down", "Over expressed DEG"="up"), selected = NULL,
+                                                            inline = TRUE, width = NULL),
+                                         radioButtons("dbPathwaychoice", "Database choice", choices = c("Reactome", "KEGG"), selected = NULL,
+                                                      inline = TRUE, width = NULL),
+                                         actionButton("analysisPathwayButton", "Start analysis", icon=icon('transfer', lib='glyphicon')),
+                                       ),
+                                     )),
+                  tabItem(tabName = "PATH_results", 
+                          tabsetPanel(id="pathwaytab1", tabPanel(
+                          title="Global results",
                           fluidRow (
                             box(
-                              title = HTML("<i>Analysis parameters</i>"),
-                              id = "boxPathwayparamers", width = 12,
-                              sliderInput("pval", "Select an adjusted p-value cutoff", min = 0, max = 1, value = 0.05, round=F),
-                              checkboxGroupInput("analysisMethodChoice", "Analysis method", choices = c("Over Representation Analysis (ORA)", "Gene Set Enrichment Analysis (GSEA)"), selected = NULL,
-                                                 inline = TRUE, width = NULL, choiceNames = NULL, choiceValues = NULL),
-                              checkboxGroupInput("oraChoice", "Interest for ORA method", choices = c("Under expressed DEG", "Over expressed DEG"), selected = NULL,
-                                                 inline = TRUE, width = NULL, choiceNames = NULL, choiceValues = NULL),
-                              radioButtons("dbPathwaychoice", "Database choice", choices = c("Reactome", "KEGG"), selected = NULL,
-                                                 inline = TRUE, width = NULL, choiceNames = NULL,  choiceValues = NULL),
-                              actionButton("analysisPathwayButton", "Start analysis", icon=icon('transfer', lib='glyphicon')),
-                              ),
-                            ),
-                          ),
+                            title = HTML("<b>Analysis summary</b>"),
+                            id = "analysisDescBox", width = 12,
+                            htmlOutput("analysisDesc"))
+                          ),fluidRow (
+                          box(
+                            id = "pathwaytablebox", width = 12,
+                            DT::DTOutput('pathwaytable')))),
+                          tabPanel(title="Results visualisation",
+                                   fluidRow (
+                                     box(
+                                       title = HTML("<b>Plot parameters</b>"),
+                                       id = "analysisDescBox", width = 12,
+                                       sliderInput("qval", "Select an adjusted p-value cutoff to adapt the plots", min = 0, max = 1, value = 0.05, round=F),
+                                     )),
+                                   fluidRow (
+                                     box(
+                                       title = HTML("<b>Dotplot</b>"),
+                                       id = "pathwayplot1",
+                                       plotOutput("pathwayplotout", 
+                                                  height="425px",
+                                                  click = "plot_click",
+                                                  dblclick = "plot_dblclick",
+                                                  hover = "plot_hover",
+                                                  brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535"))
+                                     ),
+                                     box(
+                                       title = HTML("<b>Barplot</b>"),
+                                       id = "pathwayplot2",
+                                       plotOutput("pathwayplotout2", 
+                                                  height="425px",
+                                                  click = "plot_click",
+                                                  dblclick = "plot_dblclick",
+                                                  hover = "plot_hover",
+                                                  brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535"))
+                                     ),
+                                   ),
+                                   fluidRow (
+                                     box(
+                                       ### To convert to a renderOutput and remove in ORA results
+                                       title = HTML("<b>GSEA plot</b>"),
+                                       id = "gseaplot", width = 12,
+                                       plotOutput("gseaplot", 
+                                                  height="425px",
+                                                  click = "plot_click",
+                                                  dblclick = "plot_dblclick",
+                                                  hover = "plot_hover",
+                                                  brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535"))
+                                     )
+                                   )),
+                          tabPanel(title="Pathway exploration",
+                                   box(
+                                     id = "pathwayselection", height = "100px", width = 12,
+                                   selectInput("pathway", "Select a pathway:", choices="None")),
+                                   box(width = 12, uiOutput("pathway"))),
+                          )),
                   
                   # Information tab
                   tabItem(tabName = "ABOUT",

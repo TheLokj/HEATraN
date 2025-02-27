@@ -21,6 +21,10 @@ a:hover {
   background: #7e3535;
 }
 
+input[type="radio"], input[type="checkbox"] {
+    accent-color: #7e3535;
+}
+
 .disabled-button {
     pointer-events: none;
     opacity: 0.6;}
@@ -49,7 +53,7 @@ table.dataTable tbody tr.selected td, table.dataTable tbody td.selected {
       border-top-color: white !important;
       box-shadow: inset 0 0 0 9999px #384246 !important;
 }
-  
+
 table.dataTable tbody tr:active td {
   background-color: #384246 !important;
   
@@ -58,7 +62,17 @@ table.dataTable tbody tr:active td {
 table.dataTable tbody tr:hover, table.dataTable tbody tr:hover td {
   background-color: #4B5458  !important;
   color: white !important;
-}}
+}
+
+table.dataTable tbody trtd a, table.dataTable tbody tr td a {
+  color:#7e3535 !important;
+  text-decoration: underline !important;
+}
+
+table.dataTable tbody tr.selected td a, table.dataTable tbody tr:hover td a {
+  color:#E69F00 !important;
+  text-decoration: underline !important;
+}
 
 .logo {
   font-weight: bold;

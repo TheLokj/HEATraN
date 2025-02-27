@@ -5,8 +5,13 @@
 # Last updated : 18/11/2024
 # HEATraN version 0.2.0-a.5
 
+setwd("../")
+source("./bin/fun/pathway.R")
+
 emptyTable <- data.frame(Gene=NA, Log2FC=NA, p_value=NA)
+emptyTable2 <- data.frame(Pathway=NA, p_value=NA, q_value=NA)
 brushInfo <- reactiveVal(NULL)
+enrichment <- reactiveVal(NULL)
 selectionMode <- reactiveVal("None")
 preprocessedData <- reactiveVal(emptyTable)
 requiredNames <- c("GeneName", "GeneID", "baseMean", "Log2FC", "pval", "padj")
@@ -122,6 +127,21 @@ function(input, output, session) {
           theme(text = element_text(size = 14))    
         return(plot)})
     
+    dotPlot <- reactive({
+      data = enrichment()$enrichment
+      plot = dotplot(data, showCategory=30) + ggtitle("DotPlot" )   
+      return(plot)})
+    
+    barPlot <- reactive({
+      data = enrichment()$enrichment
+      plot = barplot(data, showCategory=30) + ggtitle("BarPlot" )   
+      return(plot)})
+    
+    gseaPlot <- reactive({
+      data = enrichment()$enrichment
+      plot = gseaplot(data, 1) 
+      return(plot)})
+    
     # -----------------------------------------
     # User event
     # -----------------------------------------
@@ -129,6 +149,8 @@ function(input, output, session) {
     # Reactive function controling the selection mode 
     # As shiny do not allow to disable downloadButton, disable it with shinyJS
     # Disable also other buttons with shinyJS to standardize rendering
+    
+    #--- Whole Data Inspection ---#
     observeEvent(selectionMode(), {
       message(paste("Selection mode:", selectionMode()))
       if (selectionMode() != "None") {
@@ -240,6 +262,25 @@ function(input, output, session) {
       }
     }) |> bindEvent(input$ZoomButton, ignoreNULL=F)
     
+    #--- Pathway Enrichment ---#
+    
+    observe({
+      if (is.na(preprocessedData()[1,1])){
+        shinyalert("Bad input", "Analysis require data!", type = "error", confirmButtonCol = "#7e3535")
+      }
+      else if (input$analysisMethodChoice=="ORA" & is.null(input$oraChoice)){
+        shinyalert("Incomplete selection!", "You should select an interest for ORA method", type = "error", confirmButtonCol = "#7e3535")
+      }
+      else {
+      withProgress(message = "Pathway enrichment...",
+        {
+          message("Starting Pathway Enrichment...")
+          df = as.data.frame(preprocessedData())
+          enrichment(pathway(df, organism = "Mus musculus", DB=input$dbPathwaychoice, analysis=input$analysisMethodChoice, oraInterest=input$oraChoice, pval=input$pvalPathway))},
+        )}
+    }) |> bindEvent(input$analysisPathwayButton)
+    
+    
     # -----------------------------------------
     # UI output 
     # -----------------------------------------
@@ -275,5 +316,99 @@ function(input, output, session) {
       else {
       }
     })
+    
+    ### Pathway
+    observeEvent(enrichment(), {
+      data = enrichment()$enrichment
+      if (enrichment()$parameters$DB=="KEGG"){
+      updateSelectInput(session ,"pathway",
+                      choices = data$ID)}
+      else if (enrichment()$parameters$DB=="Reactome"){
+        updateSelectInput(session ,"pathway",
+                          choices = data$Description)}
+    }) 
+    
+    output$analysisDesc <- renderUI({
+      if (!is.null(enrichment())){
+        HTML(paste("<b>Organism :</b>", enrichment()$parameters$organism,
+              "| <b>Requested database :</b>", enrichment()$parameters$DB,
+              "| <b>Analysis :</b>", enrichment()$parameters$analysis,
+              "| <b>Log2FC threshold :</b>", enrichment()$parameters$threshold,
+              "| <b>Pval :</b>", enrichment()$parameters$pval,
+              "<br><b> No. of enriched pathways :</b>", length(unique(enrichment()$enrichment$ID)))
+             )
+      } else {
+        HTML("<i>You must launch a pathway enrichment to explore its results.</i>")}
+    })
+    
+    output$pathwaytable <- DT::renderDT ({
+      message("Rendering Pathway DataTable")
+      if (!is.null(enrichment())){
+        df = as.data.frame(enrichment()$enrichment)
+        for (i in 1:length(df$ID)) {
+          if (enrichment()$parameters$DB=="KEGG"){
+            df$ID[i] = paste('<a href="https://www.genome.jp/pathway/', df$ID[i], '" target="_blank">', df$ID[i], '</a>', sep="")
+          } else if (enrichment()$parameters$DB=="Reactome"){
+            df$ID[i] = paste('<a href="https://reactome.org/PathwayBrowser/#/', df$ID[i], '" target="_blank">', df$ID[i], '</a>', sep="")
+          }
+        }
+        datatable(df, escape = FALSE)}
+      else {
+        emptyTable2
+      }
+    })
+    
+    output$pathwayplotout <- renderPlot ({
+      message("Rendering Pathway dotPlot")
+      if (!is.null(dotPlot())){
+        dotPlot()}
+      else {
+      }
+    })
       
+    output$pathwayplotout2 <- renderPlot ({
+      message("Rendering Pathway batPlot")
+      if (!is.null(barPlot())){
+        barPlot()}
+      else {
+      }
+    })  
+    
+    output$gseaplot <- renderPlot ({
+      message("Rendering Pathway GSEA plot")
+      if (!is.null(gseaPlot())){
+        gseaPlot()}
+      else {
+      }
+  })
+    
+    output$pathway <- renderUI({
+      if (enrichment()$parameters$DB == "KEGG"){
+        imageOutput("pathwayKegg", width = "100%", height = "auto")
+      } else {
+        imageOutput("pathwayReactome", width = "100%", height = "auto")
+      }
+    }) |> bindEvent(input$pathway)
+    
+    output$pathwayKegg <- renderImage(deleteFile=F, {
+      message("Rendering Pathway plot")
+      if (input$pathway!="None" & enrichment()$parameters$DB == "KEGG"){
+        list(
+          src = paste(getwd(), "/out/", input$pathway, ".png", sep=""),
+          contentType = 'image/png',
+          alt = "Image PNG"
+        )} else {
+        }
+  })
+    
+    output$pathwayReactome <- renderImage(deleteFile=F, {
+     # message("Warning : plotting fold change only for non-duplicate gene")
+     if (input$pathway!="None" & enrichment()$parameters$DB == "Reactome"){
+       list(
+         src = paste(getwd(), "/out/", gsub(" ", "_", input$pathway), ".png", sep=""),
+         contentType = 'image/png',
+         alt = "Image PNG"
+       )} else {
+       }}
+      )
 }
