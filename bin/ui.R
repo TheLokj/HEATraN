@@ -40,9 +40,9 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                             ".tsv")),
                 
                 # Reference organism selection
-                selectInput("variable", "Select an organism name:",
-                            c("Homo sapiens" = "Hs",
-                              "Mus musculus" = "Mm")),
+                selectInput("species", "Select an organism name:",
+                            c("Homo sapiens",
+                              "Mus musculus")),
                 
                 # Menu
                 sidebarMenu(

@@ -65,9 +65,9 @@ getReactomePathway = function(rankedLog2FC, pathwayDesc, organism){
 }
 
 preprocessPathway = function(data, organism, DB){
+  entrezIds = bitr(data$GeneID, fromType = "ENSEMBL", toType = "ENTREZID", OrgDb = orgs[orgs$organism==organism, "db"], drop=T)
   if (DB == "KEGG"){
     keggOrganism = as.character(search_kegg_organism(organism, by='scientific_name')['kegg_code'])
-    entrezIds = bitr(data$GeneID, fromType = "ENSEMBL", toType = "ENTREZID", OrgDb = orgs[orgs$organism==organism, "db"], drop=T)
     keggIds = bitr_kegg(entrezIds$ENTREZID, fromType="ncbi-geneid", toType="kegg", organism=keggOrganism, drop=T)
     colnames(entrezIds) = c("GeneID", "ENTREZID")
     colnames(keggIds) = c("ENTREZID", "KeggIds")
@@ -75,7 +75,6 @@ preprocessPathway = function(data, organism, DB){
     data = merge(data, getids)
     return(list(organism=keggOrganism, genes=data, ranked=rankFC(data, "KeggIds")))
   } else if (DB == "Reactome"){
-    entrezIds = bitr(data$GeneID, fromType = "ENSEMBL", toType = "ENTREZID", OrgDb = orgs[orgs$organism==organism, "db"], drop=T)
     colnames(entrezIds) = c("GeneID", "ENTREZID")
     data = merge(data, entrezIds)
     return(list(organism=organism, genes=data, ranked=rankFC(data, "ENTREZID")))
@@ -96,7 +95,11 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
     else if (oraInterest == "up"){
       message(paste("Analyzing DEG with a Log2FC >", threshold, ".", sep=""))
       data = data[data$Log2FC>threshold,]}
-    data = preprocessPathway(data, organism, DB)
+    data <- tryCatch({preprocessPathway(data, organism, DB)}, error = function(e) {return(NULL)})
+    if (is.null(data)){
+      shinyalert("Database issue", text="Unrecognized ids, please check the selected species or convert your ids using an online converter.", type = "error")
+      return()
+    }
     genesList = names(data$ranked)[abs(data$ranked)]
     #--- Analysis ---#
     if (DB == "KEGG"){
@@ -113,7 +116,11 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
   if (analysis == "GSEA"){
     message("Doing Gene Set Enrichment Analysis on differentially expressed genes regarding their pathway.")
     #--- Preprocess ---#
-    data = preprocessPathway(data, organism, DB)
+    data <- tryCatch({preprocessPathway(data, organism, DB)}, error = function(e) {return(NULL)})
+    if (is.null(data)){
+      shinyalert("Database issue", text="Unrecognized ids, please check the selected species or convert your ids using an online converter.", type = "error")
+      return()
+    }
     #--- Analysis ---#
     if (DB == "KEGG"){
       enrichment = gseKEGG(data$ranked, organism=orgs[orgs$organism==organism, "TLname"], 

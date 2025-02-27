@@ -276,7 +276,7 @@ function(input, output, session) {
         {
           message("Starting Pathway Enrichment...")
           df = as.data.frame(preprocessedData())
-          enrichment(pathway(df, organism = "Mus musculus", DB=input$dbPathwaychoice, analysis=input$analysisMethodChoice, oraInterest=input$oraChoice, pval=input$pvalPathway))},
+          enrichment(pathway(df, organism = input$species, DB=input$dbPathwaychoice, analysis=input$analysisMethodChoice, oraInterest=input$oraChoice, pval=input$pvalPathway))},
         )}
     }) |> bindEvent(input$analysisPathwayButton)
     
