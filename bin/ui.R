@@ -113,69 +113,142 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                             ))
                   ),
                   
-                  # GO Term Enrichment tab, WIP
-                  tabItem(tabName = "GO",
-                          h2("GO Term Enrichment"),
-                          fluidRow(
-                            box(
-                              title = "GO Analysis Parameters",
-                              width = 4,
-                              selectInput("goOntology", "Ontology Type:",
-                                          choices = c("Biological Process" = "BP",
-                                                      "Molecular Function" = "MF",
-                                                      "Cellular Component" = "CC")),
-                              numericInput("pvalueCutoff", "P-value Cutoff:", 0.05, min = 0, max = 1, step = 0.01),
-                              numericInput("qvalueCutoff", "Q-value Cutoff:", 0.10, min = 0, max = 1, step = 0.01),
-                              actionButton("runGO", "Run GO Analysis", icon = icon("play"))
+                 
+                  tabItem(
+                    tabName = "GO",
+                    h2("GO Term Enrichment"),
+                    
+                    # TabsetPanel pour séparer les paramètres et les résultats
+                    tabsetPanel(
+                      
+                      # Onglet 1: Paramètres de l'analyse GO
+                      tabPanel(
+                        "Paramètres de l'analyse GO",
+                        fluidRow(
+                          box(
+                            title = HTML("<i>Analysis parameters</i>"),
+                            id = "boxPathwayparamers",
+                            width = 12,
+                            status = NULL,
+                            solidHeader = FALSE,
+                            collapsible = FALSE,
+                            
+                            # Entrée pour la p-value et le q-value
+                            sliderInput("go_pval", "Select an adjusted p-value cutoff", 
+                                        min = 0, max = 1, value = 0.05, round = FALSE),
+                            numericInput("qvalueCutoff", "q-value cutoff", 
+                                         min = 0, max = 1, value = 0.2, step = 0.01),
+                            
+                            # Sélection de la méthode d'analyse
+                            checkboxGroupInput("go_analysisMethodChoice", "Analysis method",
+                                               choices = c("Over Representation Analysis (ORA)", "Gene Set Enrichment Analysis (GSEA)"),
+                                               selected = NULL,
+                                               inline = TRUE),
+                            
+                            # Sélection des gènes d'intérêt pour ORA
+                            checkboxGroupInput("go_oraChoice", "Interest for ORA method",
+                                               choices = c("Under expressed DEG", "Over expressed DEG"),
+                                               selected = NULL,
+                                               inline = TRUE),
+                            
+                            # Sélection de l'ontologie GO
+                            selectInput("inputGO", "Select a GO annotation",
+                                        choices = list("Biological process" = "BP",
+                                                       "Molecular function" = "MF",
+                                                       "Cellular component" = "CC"),
+                                        selected = "BP"),
+                            
+                            # Niveau de précision des termes GO
+                            numericInput("goLevel", "GO level of precision (from 1 to 7)", 
+                                         min = 1, max = 7, value = 1),
+                            
+                            # Bouton pour démarrer l'analyse
+                            actionButton("go_analysisButton", "Start analysis", icon = icon('text-background', lib = 'glyphicon'))
+                          )
+                        )
+                      ),
+                      
+                      # Onglet 2: Résultats Analyse GO - séparer Up-regulated, Down-regulated et Both
+                      tabPanel(
+                        "Résultats Analyse GO",
+                        fluidRow(
+                          tabBox(
+                            title = "Résultats Analyse GO",
+                            width = 12,
+                            id = "go_results_tabs",
+                            
+                            # Onglet Up-regulated
+                            tabPanel("Up-regulated",
+                                     fluidRow(
+                                       column(
+                                         width = 6,
+                                         h4("Up-regulated ORA results"),
+                                         tabsetPanel(
+                                           tabPanel("Barplot", plotOutput("goBarplotUp")),
+                                           tabPanel("Dotplot", plotOutput("goDotplotUp")),
+                                           tabPanel("Network", plotOutput("goNetplotUp")),
+                                           tabPanel("Table", DT::dataTableOutput("goTableUp"))
+                                         )
+                                       ),
+                                       column(
+                                         width = 6,
+                                         h4("Up-regulated GSEA results"),
+                                         plotOutput("gseaPlotUp"),  # À implémenter dans server.R
+                                         DT::dataTableOutput("gseaTableUp")
+                                       )
+                                     )
                             ),
-                            box(
-                              title = "Visualization Options",
-                              width = 8,
-                              tabsetPanel(
-                                tabPanel("Word Cloud (Up-regulated)",
-                                         sliderInput("maxWordsUp", "Maximum Words:", min = 5, max = 50, value = 25),
-                                         plotOutput("wordcloudPlotUp", height = "400px")
-                                ),
-                                tabPanel("Word Cloud (Down-regulated)",
-                                         sliderInput("maxWordsDown", "Maximum Words:", min = 5, max = 50, value = 25),
-                                         plotOutput("wordcloudPlotDown", height = "400px")
-                                ),
-                                tabPanel("Bar Plot (Up-regulated)",
-                                         sliderInput("topCategoriesUp", "Top Categories:", min = 5, max = 30, value = 10),
-                                         plotOutput("goBarplotUp", height = "400px")
-                                ),
-                                tabPanel("Bar Plot (Down-regulated)",
-                                         sliderInput("topCategoriesDown", "Top Categories:", min = 5, max = 30, value = 10),
-                                         plotOutput("goBarplotDown", height = "400px")
-                                ),
-                                tabPanel("Dot Plot (Up-regulated)",
-                                         plotOutput("goDotplotUp", height = "400px")
-                                ),
-                                tabPanel("Dot Plot (Down-regulated)",
-                                         plotOutput("goDotplotDown", height = "400px")
-                                ),
-                                tabPanel("Network Plot (Up-regulated)",
-                                         plotOutput("goNetplotUp", height = "400px")
-                                ),
-                                tabPanel("Network Plot (Down-regulated)",
-                                         plotOutput("goNetplotDown", height = "400px")
-                                )
-                              )
-                            )
-                          ),
-                          fluidRow(
-                            box(
-                              title = "GO Enrichment Results (Up-regulated)",
-                              width = 12,
-                              DT::DTOutput("goTableUp")
+                            
+                            # Onglet Down-regulated
+                            tabPanel("Down-regulated",
+                                     fluidRow(
+                                       column(
+                                         width = 6,
+                                         h4("Down-regulated ORA results"),
+                                         tabsetPanel(
+                                           tabPanel("Barplot", plotOutput("goBarplotDown")),
+                                           tabPanel("Dotplot", plotOutput("goDotplotDown")),
+                                           tabPanel("Network", plotOutput("goNetplotDown")),
+                                           tabPanel("Table", DT::dataTableOutput("goTableDown"))
+                                         )
+                                       ),
+                                       column(
+                                         width = 6,
+                                         h4("Down-regulated GSEA results"),
+                                         plotOutput("gseaPlotDown"),  # À implémenter dans server.R
+                                         DT::dataTableOutput("gseaTableDown")
+                                       )
+                                     )
                             ),
-                            box(
-                              title = "GO Enrichment Results (Down-regulated)",
-                              width = 12,
-                              DT::DTOutput("goTableDown")
+                            
+                            # Onglet Both-regulated
+                            tabPanel("Both-regulated",
+                                     fluidRow(
+                                       column(
+                                         width = 6,
+                                         h4("Both-regulated ORA results"),
+                                         tabsetPanel(
+                                           tabPanel("Barplot", plotOutput("goBarplotBoth")),
+                                           tabPanel("Dotplot", plotOutput("goDotplotBoth")),
+                                           tabPanel("Network", plotOutput("goNetplotBoth")),
+                                           tabPanel("Table", DT::dataTableOutput("goTableBoth"))
+                                         )
+                                       ),
+                                       column(
+                                         width = 6,
+                                         h4("Both-regulated GSEA results"),
+                                         plotOutput("gseaPlotBoth"),  # À implémenter dans server.R
+                                         DT::dataTableOutput("gseaTableBoth")
+                                       )
+                                     )
                             )
                           )
-                  ),
+                        )
+                      )
+                    )
+                  )
+                  
+                  ,
                   
                   # Pathways Enrichment tab, WIP
                   tabItem(tabName = "PATH",
