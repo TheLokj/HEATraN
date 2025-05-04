@@ -6,12 +6,13 @@ organism = "org.Mm.eg.db"
 #BiocManager::install(organism, character.only = TRUE)
 library(organism, character.only = TRUE)
 #reading in input from deseq2
-setwd("/home/naitelam/Alternance_1/cours_rouen/projet_Rshiny/HEATraN-main/data")
-df = read.csv("/home/naitelam/Alternance_1/cours_rouen/projet_Rshiny/HEATraN-main/data/exemple_bon.csv", header=TRUE,sep = ";")
+setwd("/home/naitelam/Alternance_1/git_tuto/HEATraN/data")
+df = read.csv("/home/naitelam/exemple.csv", header=TRUE,sep = ";")
+head(df)
 original_gene_list <- df$log2FC
-#name the vector
+
 names(original_gene_list) <- df$ID
-#omit any NA values
+
 gene_list<-na.omit(original_gene_list)
 #sort the list in decreasing order (required for clusterProfiler)
 gene_list = sort(gene_list, decreasing = TRUE)
@@ -23,7 +24,7 @@ genes <- sig_genes_df$log2FC
 names(genes) <- sig_genes_df$ID
 #omit NA values
 genes <- na.omit(genes)
-
+head(genes)
 # 
 # filter on min log2fold change (log2FoldChange > 2)
 # 
@@ -104,7 +105,7 @@ dotplot(go_enrich)
 #Encrichment map:
 
 emapplot(go_enrich)
-regler l'erreur :
+
 
 '''
 

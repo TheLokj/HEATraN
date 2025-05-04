@@ -276,13 +276,19 @@ function(input, output, session) {
       }
     })
 
-    #######added this :
+   
     # GO Analysis reactive values
     goResults <- reactiveVal(NULL)
+    goResultsUp <- reactiveVal(NULL)
+    goResultsDown <- reactiveVal(NULL)
+    
     observeEvent(input$runGO, {
       req(preprocessedData())
       withProgress(message = 'Running GO analysis...', {
         # Prepare gene list
+        
+        
+        
         df <- preprocessedData()
         print(head(df))  
         print("la langeur de df : \n")
@@ -306,77 +312,140 @@ function(input, output, session) {
         # 
         # genes <- names(genes)[abs(genes) > 2]
         # length(genes)
+        up_genes <- names(genes)[genes > 0]
+        down_genes <- names(genes)[genes < 0]
         
-        #Ontology Options: [“BP”, “MF”, “CC”]
-        
-        organism <- "org.Mm.eg.db"
-        genes <- names(genes)
+        # Ontology Options: ["BP", "MF", "CC"]
+        ontology <- input$ontology
+        organism <- input$organism
         universe <- names(gene_list)
-        # # Run enrichGO
-        go_enrich <- enrichGO(
-          gene = genes,
+        library(organism, character.only = TRUE)
+        # Run enrichGO for up-regulated genes
+        go_enrich_up <- enrichGO(
+          gene = up_genes,
           universe = universe,
           OrgDb = organism,
           keyType = "ENSEMBL",
           readable = TRUE,
-          ont = "BP",
+          ont = ontology,
           pvalueCutoff = 0.05,
           qvalueCutoff = 0.10
         )
-
-        print(head(go_enrich)) 
-        # # Store results
-         goResults(go_enrich)
+        
+        # Run enrichGO for down-regulated genes
+        go_enrich_down <- enrichGO(
+          gene = down_genes,
+          universe = universe,
+          OrgDb = organism,
+          keyType = "ENSEMBL",
+          readable = TRUE,
+          ont = ontology,
+          pvalueCutoff = 0.05,
+          qvalueCutoff = 0.10
+        )
+        
+        print(head(go_enrich_up))
+        print(head(go_enrich_down))
+        
+        # Store results
+        goResultsUp(go_enrich_up)
+        goResultsDown(go_enrich_down)
       })
     })
-
-    # Render word cloud
-    output$wordcloudPlot <- renderPlot({
-      req(goResults())
-      go_enrich <- goResults()
-      wcdf <- read.table(text = go_enrich$GeneRatio, sep = "/")[1]
-      wcdf$term <- go_enrich[,2]
-      wcdf$term <- substr(wcdf$term, 1, 25)
-
-      wordcloud(
-        words = wcdf$term,
-        freq = wcdf$V1,
-        scale = c(4, 0.1),
-        colors = brewer.pal(8, "Dark2"),
-        max.words = input$maxWords
-      )
-    })
-
-    # Render bar plot
-    output$goBarplot <- renderPlot({
-      req(goResults())
-      barplot(goResults(),
+    
+    # # Render word cloud for up-regulated genes
+    # output$wordcloudPlotUp <- renderPlot({
+    #   req(goResultsUp())
+    #   go_enrich <- goResultsUp()
+    #   wcdf <- read.table(text = go_enrich$GeneRatio, sep = "/")[1]
+    #   wcdf$term <- go_enrich[,2]
+    #   wcdf$term <- substr(wcdf$term, 1, 25)
+    #   
+    #   wordcloud(
+    #     words = wcdf$term,
+    #     freq = wcdf$V1,
+    #     scale = c(4, 0.1),
+    #     colors = brewer.pal(8, "Dark2"),
+    #     max.words = input$maxWords
+    #   )
+    # })
+    # 
+    # # Render word cloud for down-regulated genes
+    # output$wordcloudPlotDown <- renderPlot({
+    #   req(goResultsDown())
+    #   go_enrich <- goResultsDown()
+    #   wcdf <- read.table(text = go_enrich$GeneRatio, sep = "/")[1]
+    #   wcdf$term <- go_enrich[,2]
+    #   wcdf$term <- substr(wcdf$term, 1, 25)
+    #   
+    #   wordcloud(
+    #     words = wcdf$term,
+    #     freq = wcdf$V1,
+    #     scale = c(4, 0.1),
+    #     colors = brewer.pal(8, "Dark2"),
+    #     max.words = input$maxWordsDown,
+    #     cex = 1  # Add cex parameter to avoid strwidth error
+    #   )
+    # })
+    
+    # Render bar plot for up-regulated genes
+    output$goBarplotUp <- renderPlot({
+      req(goResultsUp())
+      barplot(goResultsUp(),
               drop = TRUE,
               showCategory = input$topCategories,
-              title = "GO Biological Pathways",
+              title = "GO Biological Pathways (Up-regulated)",
               font.size = 8)
     })
-
-    # Render dot plot
-    output$goDotplot <- renderPlot({
-      req(goResults())
-      dotplot(goResults())
+    
+    # Render bar plot for down-regulated genes
+    output$goBarplotDown <- renderPlot({
+      req(goResultsDown())
+      barplot(goResultsDown(),
+              drop = TRUE,
+              showCategory = input$topCategories,
+              title = "GO Biological Pathways (Down-regulated)",
+              font.size = 8)
     })
-
-    # Render network plot
-    output$goNetplot <- renderPlot({
-      req(goResults())
-      go_enrich <- pairwise_termsim(go_enrich)
+    
+    # Render dot plot for up-regulated genes
+    output$goDotplotUp <- renderPlot({
+      req(goResultsUp())
+      dotplot(goResultsUp())
+    })
+    
+    # Render dot plot for down-regulated genes
+    output$goDotplotDown <- renderPlot({
+      req(goResultsDown())
+      dotplot(goResultsDown())
+    })
+    
+    # Render network plot for up-regulated genes
+    output$goNetplotUp <- renderPlot({
+      req(goResultsUp())
+      go_enrich <- pairwise_termsim(goResultsUp())
       emapplot(go_enrich)
       emapplot(go_enrich, layout = "kk", showCategory = 15)
-      
-      emapplot(goResults(), layout = "kk", showCategory = 15)
     })
-
-    # Render results table
-    output$goTable <- DT::renderDT({
-      req(goResults())
-      as.data.frame(goResults())
+    
+    # Render network plot for down-regulated genes
+    output$goNetplotDown <- renderPlot({
+      req(goResultsDown())
+      go_enrich <- pairwise_termsim(goResultsDown())
+      emapplot(go_enrich)
+      emapplot(go_enrich, layout = "kk", showCategory = 15)
+    })
+    
+    # Render results table for up-regulated genes
+    output$goTableUp <- DT::renderDT({
+      req(goResultsUp())
+      as.data.frame(goResultsUp())
+    })
+    
+    # Render results table for down-regulated genes
+    output$goTableDown <- DT::renderDT({
+      req(goResultsDown())
+      as.data.frame(goResultsDown())
     })
 
 }

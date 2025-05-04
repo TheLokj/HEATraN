@@ -39,9 +39,9 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                             ".tsv")),
                 
                 # Reference organism selection
-                selectInput("variable", "Select an organism name:",
-                            c("Homo sapiens" = "Hs",
-                              "Mus musculus" = "Mm")),
+                # Ajouter des entrées pour l'ontologie et l'organisme
+                selectInput("ontology", "Ontology:", choices = c("BP", "MF", "CC")),
+                selectInput("organism", "Organism:", choices = c("org.Mm.eg.db", "org.Hs.eg.db", "org.Sc.sgd.db")),
                 
                 # Menu
                 sidebarMenu(
@@ -120,7 +120,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                             box(
                               title = "GO Analysis Parameters",
                               width = 4,
-                              selectInput("goOntology", "Ontology Type:", 
+                              selectInput("goOntology", "Ontology Type:",
                                           choices = c("Biological Process" = "BP",
                                                       "Molecular Function" = "MF",
                                                       "Cellular Component" = "CC")),
@@ -132,28 +132,47 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                               title = "Visualization Options",
                               width = 8,
                               tabsetPanel(
-                                tabPanel("Word Cloud", 
-                                         sliderInput("maxWords", "Maximum Words:", min = 5, max = 50, value = 25),
-                                         plotOutput("wordcloudPlot", height = "400px")
+                                tabPanel("Word Cloud (Up-regulated)",
+                                         sliderInput("maxWordsUp", "Maximum Words:", min = 5, max = 50, value = 25),
+                                         plotOutput("wordcloudPlotUp", height = "400px")
                                 ),
-                                tabPanel("Bar Plot", 
-                                         sliderInput("topCategories", "Top Categories:", min = 5, max = 30, value = 10),
-                                         plotOutput("goBarplot", height = "400px")
+                                tabPanel("Word Cloud (Down-regulated)",
+                                         sliderInput("maxWordsDown", "Maximum Words:", min = 5, max = 50, value = 25),
+                                         plotOutput("wordcloudPlotDown", height = "400px")
                                 ),
-                                tabPanel("Dot Plot", 
-                                         plotOutput("goDotplot", height = "400px")
+                                tabPanel("Bar Plot (Up-regulated)",
+                                         sliderInput("topCategoriesUp", "Top Categories:", min = 5, max = 30, value = 10),
+                                         plotOutput("goBarplotUp", height = "400px")
                                 ),
-                                tabPanel("Network Plot",
-                                         plotOutput("goNetplot", height = "400px")
+                                tabPanel("Bar Plot (Down-regulated)",
+                                         sliderInput("topCategoriesDown", "Top Categories:", min = 5, max = 30, value = 10),
+                                         plotOutput("goBarplotDown", height = "400px")
+                                ),
+                                tabPanel("Dot Plot (Up-regulated)",
+                                         plotOutput("goDotplotUp", height = "400px")
+                                ),
+                                tabPanel("Dot Plot (Down-regulated)",
+                                         plotOutput("goDotplotDown", height = "400px")
+                                ),
+                                tabPanel("Network Plot (Up-regulated)",
+                                         plotOutput("goNetplotUp", height = "400px")
+                                ),
+                                tabPanel("Network Plot (Down-regulated)",
+                                         plotOutput("goNetplotDown", height = "400px")
                                 )
                               )
                             )
                           ),
                           fluidRow(
                             box(
-                              title = "GO Enrichment Results",
+                              title = "GO Enrichment Results (Up-regulated)",
                               width = 12,
-                              DT::DTOutput("goTable")
+                              DT::DTOutput("goTableUp")
+                            ),
+                            box(
+                              title = "GO Enrichment Results (Down-regulated)",
+                              width = 12,
+                              DT::DTOutput("goTableDown")
                             )
                           )
                   ),
