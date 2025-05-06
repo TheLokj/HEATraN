@@ -168,83 +168,53 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                         )
                       ),
                       
-                      # Onglet 2: Résultats Analyse GO - séparer Up-regulated, Down-regulated et Both
                       tabPanel(
                         "Résultats Analyse GO",
                         fluidRow(
-                          tabBox(
-                            title = "Résultats Analyse GO",
-                            width = 12,
-                            id = "go_results_tabs",
-                            
-                            # Onglet Up-regulated
-                            tabPanel("Up-regulated",
-                                     fluidRow(
-                                       column(
-                                         width = 6,
-                                         h4("Up-regulated ORA results"),
-                                         tabsetPanel(
-                                           tabPanel("Barplot", plotOutput("goBarplotUp")),
-                                           tabPanel("Dotplot", plotOutput("goDotplotUp")),
-                                           tabPanel("Network", plotOutput("goNetplotUp")),
-                                           tabPanel("Table", DT::dataTableOutput("goTableUp"))
-                                         )
-                                       ),
-                                       column(
-                                         width = 6,
-                                         h4("Up-regulated GSEA results"),
-                                         plotOutput("gseaPlotUp"),  # À implémenter dans server.R
-                                         DT::dataTableOutput("gseaTableUp")
-                                       )
-                                     )
-                            ),
-                            
-                            # Onglet Down-regulated
-                            tabPanel("Down-regulated",
-                                     fluidRow(
-                                       column(
-                                         width = 6,
-                                         h4("Down-regulated ORA results"),
-                                         tabsetPanel(
-                                           tabPanel("Barplot", plotOutput("goBarplotDown")),
-                                           tabPanel("Dotplot", plotOutput("goDotplotDown")),
-                                           tabPanel("Network", plotOutput("goNetplotDown")),
-                                           tabPanel("Table", DT::dataTableOutput("goTableDown"))
-                                         )
-                                       ),
-                                       column(
-                                         width = 6,
-                                         h4("Down-regulated GSEA results"),
-                                         plotOutput("gseaPlotDown"),  # À implémenter dans server.R
-                                         DT::dataTableOutput("gseaTableDown")
-                                       )
-                                     )
-                            ),
-                            
-                            # Onglet Both-regulated
-                            tabPanel("Both-regulated",
-                                     fluidRow(
-                                       column(
-                                         width = 6,
-                                         h4("Both-regulated ORA results"),
-                                         tabsetPanel(
-                                           tabPanel("Barplot", plotOutput("goBarplotBoth")),
-                                           tabPanel("Dotplot", plotOutput("goDotplotBoth")),
-                                           tabPanel("Network", plotOutput("goNetplotBoth")),
-                                           tabPanel("Table", DT::dataTableOutput("goTableBoth"))
-                                         )
-                                       ),
-                                       column(
-                                         width = 6,
-                                         h4("Both-regulated GSEA results"),
-                                         plotOutput("gseaPlotBoth"),  # À implémenter dans server.R
-                                         DT::dataTableOutput("gseaTableBoth")
-                                       )
-                                     )
+                          conditionalPanel(
+                            condition = "input.go_analysisMethodChoice.includes('Over Representation Analysis (ORA)')",
+                            tabBox(
+                              title = "ORA Results",
+                              width = 12,
+                              id = "ora_results_tabs",
+                              tabPanel("Up-regulated",
+                                       tabsetPanel(
+                                         tabPanel("Barplot", plotOutput("goBarplotUp")),
+                                         tabPanel("Dotplot", plotOutput("goDotplotUp")),
+                                         tabPanel("Network", plotOutput("goNetplotUp")),
+                                         tabPanel("Table", DT::dataTableOutput("goTableUp"))
+                                       )),
+                              tabPanel("Down-regulated",
+                                       tabsetPanel(
+                                         tabPanel("Barplot", plotOutput("goBarplotDown")),
+                                         tabPanel("Dotplot", plotOutput("goDotplotDown")),
+                                         tabPanel("Network", plotOutput("goNetplotDown")),
+                                         tabPanel("Table", DT::dataTableOutput("goTableDown"))
+                                       )),
+                              tabPanel("Both-regulated",
+                                       tabsetPanel(
+                                         tabPanel("Barplot", plotOutput("goBarplotBoth")),
+                                         tabPanel("Dotplot", plotOutput("goDotplotBoth")),
+                                         tabPanel("Network", plotOutput("goNetplotBoth")),
+                                         tabPanel("Table", DT::dataTableOutput("goTableBoth"))
+                                       ))
+                            )
+                          ), ###A TAB FOR GSEA RESULTS 
+                          conditionalPanel(
+                            condition = "input.go_analysisMethodChoice.includes('Gene Set Enrichment Analysis (GSEA)')",
+                            tabBox(
+                              title = "GSEA Results",
+                              width = 12,
+                              id = "gsea_results_tab",
+                              tabPanel("Dotplot", plotOutput("gseaDotplot")),
+                              tabPanel("Enrichment Plot", plotOutput("gseaEnrichmentPlot")),
+                              tabPanel("Ridgeplot", plotOutput("gseaRidgeplot")),
+                              tabPanel("Table", DT::dataTableOutput("gseaTable"))
                             )
                           )
                         )
-                      )
+                      ),
+                      
                     )
                   )
                   

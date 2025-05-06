@@ -20,4 +20,5 @@ library(wordcloud)
 library(enrichplot)
 library(plotly)
 library(shinydashboardPlus) # Ajoutez cette ligne
+#BiocManager::install("aplot") # i did add it  for gseaplot2
 shinyAppDir("bin/")
