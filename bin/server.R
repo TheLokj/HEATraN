@@ -1,9 +1,11 @@
-# Developed by LESAGE Louison (@thelokj).
+# Developed by DAHER Rayan, NAIT EL DJOUDI Lamia & LESAGE Louison (@thelokj).
+# rayan.daher@univ-rouen.fr
+# lamia.nait-el-djoudi@univ-rouen.fr
 # louison.lesage@univ-rouen.fr
-# Student at Rouen Normandy University
-# University project 2024-2025
-# Last updated : 18/11/2024
-# HEATraN version 0.2.0-a.5
+# Students at Rouen Normandy University
+# Master of Bioinformatics, class M2.2 BIMS 2026 
+# Last updated : 08/05/2025
+# HEATraN version 0.3.0
 
 setwd("../")
 source("./bin/fun/pathway.R")
@@ -101,13 +103,13 @@ function(input, output, session) {
         updateSliderInput(session,'Log2FC',max=ceiling(max(abs(df$Log2FC))))
         # Adapt the plot limit when user zoom in it
         if (Zoom()$Zoomed==T){
-          df <- df[df$Log2FC>=Zoom()$coords[1]&df$Log2FC<=Zoom()$coords[2]&(-log(df$pval))>=Zoom()$coords[3]&(-log(df$pval))<=Zoom()$coords[4],]
+          df <- df[df$Log2FC>=Zoom()$coords[1]&df$Log2FC<=Zoom()$coords[2]&(-log(df$padj))>=Zoom()$coords[3]&(-log(df$padj))<=Zoom()$coords[4],]
         }
         # Update the selected points according to the selection mode
         if (selectionMode() == "Brush") {
           df$selected <- ifelse(df$GeneID%in%brushedPoints(df, brushInfo()())$GeneID, "TRUE", "FALSE")
         } else if (selectionMode() == "Sliders"){
-          df$selected <- ifelse((df$Log2FC>input$Log2FC&df$pval<input$pval)|(df$Log2FC<(-input$Log2FC)&df$pval<input$pval), "TRUE", "FALSE")
+          df$selected <- ifelse((df$Log2FC>input$Log2FC&df$padj<input$pval)|(df$Log2FC<(-input$Log2FC)&df$padj<input$pval), "TRUE", "FALSE")
           }
         return(df)
         } else {
@@ -123,24 +125,73 @@ function(input, output, session) {
           scale_color_manual(values=c("FALSE" = "#384246", "TRUE" = "#E69F00")) +
           theme(legend.position = "none") +
           xlab("log2(FoldChange)") +
-          ylab("-log10(p-value)") +
+          ylab("-log10(p-value ajusted)") +
           theme(text = element_text(size = 14))    
         return(plot)})
     
     dotPlot <- reactive({
       data = enrichment()$enrichment
+      result_df <- data@result
+      result_df[result_df$p.adjust <= input$qval, ]
+      data@result <- result_df
       plot = dotplot(data, showCategory=30) + ggtitle("DotPlot" )   
       return(plot)})
     
-    barPlot <- reactive({
+    treePlot <- reactive({
       data = enrichment()$enrichment
-      plot = barplot(data, showCategory=30) + ggtitle("BarPlot" )   
+      dataR <- pairwise_termsim(setReadable(data, orgs[orgs$organism==input$species, "db"], 'ENTREZID'))
+      if (enrichment()$parameters$analysis=="GSEA") {
+        plot = treeplot(dataR, foldChange=data@geneList)
+      } else if (enrichment()$parameters$analysis=="ORA") {
+        plot = treeplot(dataR)
+      }  
       return(plot)})
     
+    cnetPlot <- reactive({
+      data = enrichment()$enrichment
+      dataR = setReadable(data, orgs[orgs$organism==input$species, "db"], 'ENTREZID')
+      if (enrichment()$parameters$analysis=="GSEA") {
+        plot = cnetplot(dataR, foldChange=data@geneList)
+      } else {
+        plot = cnetplot(dataR)
+        }  
+      return(plot)})
+    
+    #### Change here to select the GSEA Pathway according to ID 
     gseaPlot <- reactive({
       data = enrichment()$enrichment
-      plot = gseaplot(data, 1) 
+      plot = gseaplot(data, as.numeric(input$pathwayGSEA)) 
       return(plot)})
+    
+    output$conditional_gsea_row <- renderUI({
+      if (enrichment()$parameters$analysis=="GSEA") {
+        fluidRow(
+          box(
+            title = HTML("<b>GSEA plot</b>"),
+            id = "gseaplot", width = 12,
+            selectInput("pathwayGSEA", "Select a pathway:", choices = c("None")),
+            plotOutput("gseaplot",
+                       height = "425px",
+                       click = "plot_click",
+                       dblclick = "plot_dblclick",
+                       hover = "plot_hover",
+                       brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535"))
+          )
+        )
+      }
+    })
+    
+    observeEvent(input$pathwayGSEA, {
+      if ((input$pathwayGSEA)=="None") {
+        data = enrichment()$enrichment
+        if (enrichment()$parameters$DB=="KEGG"){
+          updateSelectInput(session ,"pathwayGSEA", choices = setNames(1:length(data$ID), data$ID))
+        }
+        else if (enrichment()$parameters$DB=="Reactome"){
+          updateSelectInput(session ,"pathwayGSEA", choices = setNames(1:length(data$Description), data$Description))
+        }}
+    })
+    
     
     # -----------------------------------------
     # User event
@@ -279,8 +330,7 @@ function(input, output, session) {
           enrichment(pathway(df, organism = input$species, DB=input$dbPathwaychoice, analysis=input$analysisMethodChoice, oraInterest=input$oraChoice, pval=input$pvalPathway))},
         )}
     }) |> bindEvent(input$analysisPathwayButton)
-    
-    
+  
     # -----------------------------------------
     # UI output 
     # -----------------------------------------
@@ -321,11 +371,18 @@ function(input, output, session) {
     observeEvent(enrichment(), {
       data = enrichment()$enrichment
       if (enrichment()$parameters$DB=="KEGG"){
-      updateSelectInput(session ,"pathway",
-                      choices = data$ID)}
+        print(data)
+        updateSelectInput(session ,"pathway", choices = data$ID)
+        if (enrichment()$parameters$analysis == "GSEA") {
+        updateSelectInput(session ,"pathwayGSEA", choices = setNames(1:length(data$ID), data$ID))
+          }
+      }
       else if (enrichment()$parameters$DB=="Reactome"){
-        updateSelectInput(session ,"pathway",
-                          choices = data$Description)}
+        updateSelectInput(session ,"pathway", choices = data$Description)
+        if (enrichment()$parameters$analysis == "GSEA") {
+        updateSelectInput(session ,"pathwayGSEA", choices = setNames(1:length(data$Description), data$Description))
+        }
+      }
     }) 
     
     output$analysisDesc <- renderUI({
@@ -345,6 +402,7 @@ function(input, output, session) {
       message("Rendering Pathway DataTable")
       if (!is.null(enrichment())){
         df = as.data.frame(enrichment()$enrichment)
+        df = df[df$p.adjust <= input$qval,] 
         for (i in 1:length(df$ID)) {
           if (enrichment()$parameters$DB=="KEGG"){
             df$ID[i] = paste('<a href="https://www.genome.jp/pathway/', df$ID[i], '" target="_blank">', df$ID[i], '</a>', sep="")
@@ -352,7 +410,12 @@ function(input, output, session) {
             df$ID[i] = paste('<a href="https://reactome.org/PathwayBrowser/#/', df$ID[i], '" target="_blank">', df$ID[i], '</a>', sep="")
           }
         }
-        datatable(df, escape = FALSE)}
+        if (nrow(df) != 0) {
+          datatable(df, escape = FALSE)
+        }
+        else {
+          emptyTable2}
+       }
       else {
         emptyTable2
       }
@@ -367,16 +430,24 @@ function(input, output, session) {
     })
       
     output$pathwayplotout2 <- renderPlot ({
-      message("Rendering Pathway batPlot")
-      if (!is.null(barPlot())){
-        barPlot()}
+      message("Rendering Pathway TreePlot")
+      if (!is.null(treePlot())){
+        treePlot()}
+      else {
+      }
+    })  
+    
+    output$pathwayplotout3 <- renderPlot ({
+      message("Rendering Pathway CNETplot")
+      if (!is.null(cnetPlot())){
+        cnetPlot()}
       else {
       }
     })  
     
     output$gseaplot <- renderPlot ({
       message("Rendering Pathway GSEA plot")
-      if (!is.null(gseaPlot())){
+      if (!is.null(gseaPlot()) & enrichment()$parameters$analysis=="GSEA"){
         gseaPlot()}
       else {
       }
@@ -384,9 +455,9 @@ function(input, output, session) {
     
     output$pathway <- renderUI({
       if (enrichment()$parameters$DB == "KEGG"){
-        imageOutput("pathwayKegg", width = "100%", height = "auto")
+        imageOutput("pathwayKegg", height = "750px")
       } else {
-        imageOutput("pathwayReactome", width = "100%", height = "auto")
+        imageOutput("pathwayReactome", height = "750px")
       }
     }) |> bindEvent(input$pathway)
     
@@ -396,7 +467,8 @@ function(input, output, session) {
         list(
           src = paste(getwd(), "/out/", input$pathway, ".png", sep=""),
           contentType = 'image/png',
-          alt = "Image PNG"
+          alt = "Image PNG",
+          height="750Px"
         )} else {
         }
   })
@@ -407,8 +479,10 @@ function(input, output, session) {
        list(
          src = paste(getwd(), "/out/", gsub(" ", "_", input$pathway), ".png", sep=""),
          contentType = 'image/png',
-         alt = "Image PNG"
+         alt = "Image PNG",
+         height="750Px"
        )} else {
        }}
       )
 }
+

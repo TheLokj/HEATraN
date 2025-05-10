@@ -1,9 +1,12 @@
-# Developed by LESAGE Louison (@thelokj).
+# Developed by DAHER Rayan, NAIT EL DJOUDI Lamia & LESAGE Louison (@thelokj).
+# rayan.daher@univ-rouen.fr
+# lamia.nait-el-djoudi@univ-rouen.fr
 # louison.lesage@univ-rouen.fr
-# Student at Rouen Normandy University
-# University project 2024-2025
-# Last updated : 18/11/2024
-# HEATraN version 0.2.0-a.5
+# Students at Rouen Normandy University
+# Master of Bioinformatics, class M2.2 BIMS 2026 
+# Last updated : 08/05/2025
+# HEATraN version 0.3.0
+
 
 library(clusterProfiler)
 library(ReactomePA)
@@ -11,18 +14,31 @@ library(pathview)
 library(DOSE)
 library(enrichplot)
 library(dplyr)
-setwd("~/Bureau/Fac/Rshiny/HEATraN")
 
 # Global variables definition
-GeneID = read.table("~/Bureau/Fac/Rshiny/HEATraN/data/exemple.csv", sep=";", h=T)$GeneID
-Log2FC = read.table("~/Bureau/Fac/Rshiny/HEATraN/data/exemple.csv", sep=";", h=T)$Log2FC
-organism = "Mus musculus"
-data = as.data.frame(cbind(GeneID, Log2FC))
-data$Log2FC = as.numeric(data$Log2FC)
+#GeneID = read.table("~/Bureau/Fac/Rshiny/HEATraN/data/exemple.csv", sep=";", h=T)$GeneID
+#Log2FC = read.table("~/Bureau/Fac/Rshiny/HEATraN/data/exemple.csv", sep=";", h=T)$Log2FC
+#organism = "Mus musculus"
+#data = as.data.frame(cbind(GeneID, Log2FC))
+#data$Log2FC = as.numeric(data$Log2FC)
 
 # Organism dataframe
 orgs = data.frame(organism="Homo sapiens", db="org.Hs.eg.db", commonName="human", TLname="hsa")
 orgs = rbind(orgs, data.frame(organism="Mus musculus", db="org.Mm.eg.db", commonName="mouse", TLname="mmu"))
+orgs = rbind(orgs, data.frame(organism="Arabidopsis thaliana", db="org.At.eg.db", commonName="arabidopsis", TLname="ath"))
+orgs = rbind(orgs, data.frame(organism="Bos taurus", db="org.Bt.eg.db", commonName="bovine", TLname="bta"))
+orgs = rbind(orgs, data.frame(organism="Canis lupus familiaris", db="org.Cf.eg.db", commonName="canine", TLname="cfa"))
+orgs = rbind(orgs, data.frame(organism="Gallus gallus", db="org.Gg.eg.db", commonName="chicken", TLname="gga"))
+orgs = rbind(orgs, data.frame(organism="Escherichia coli (strain K12)", db="org.EcK12.eg.db", commonName="ecolik12", TLname="eco"))
+orgs = rbind(orgs, data.frame(organism="Drosophila melanogaster", db="org.Dm.eg.db", commonName="fly", TLname="dme"))
+orgs = rbind(orgs, data.frame(organism="Sus scrofa", db="org.Ss.eg.db", commonName="pig", TLname="ssc"))
+orgs = rbind(orgs, data.frame(organism="Rattus norvegicus", db="org.Rn.eg.db", commonName="rat", TLname="rno"))
+orgs = rbind(orgs, data.frame(organism="Caenorhabditis elegans", db="org.Ce.eg.db", commonName="celegans", TLname="cel"))
+orgs = rbind(orgs, data.frame(organism="Xenopus laevis", db="org.Xl.eg.db", commonName="xenopus", TLname="xla"))
+orgs = rbind(orgs, data.frame(organism="Saccharomyces cerevisiae", db="org.Sc.sgd.db", commonName="yeast", TLname="sce"))
+orgs = rbind(orgs, data.frame(organism="Danio rerio", db="org.Dr.eg.db", commonName="zebrafish", TLname="dre"))
+
+
 
 # Functions
 rankFC = function(data, colId){
@@ -41,7 +57,7 @@ getKEGGpathway = function(geneList, pathwayID, organism, local=T){
   if (local){
     wd = getwd()
     setwd(paste(wd, "/out", sep=""))
-    pathview(gene.data  = geneList, pathway.id = pathwayID, species = organism, kegg.dir=".")
+    try(pathview(gene.data  = geneList, pathway.id = pathwayID, species = organism, kegg.dir="."))
     setwd(wd)
     } else {
     browseKEGG(geneList, pathwayID)
@@ -139,7 +155,6 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
     }
 }
 
-
 #test = pathway(data, organism, DB="Reactome")
 #
 #ggplot(test$enrichment, aes(x = reorder(Description, setSize), y = setSize, fill=p.adjust)) +
@@ -157,7 +172,7 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
 #cnetplot(
 #  x = test$enrichment, category = "Description",  gene = "core_enrichment", pvalue = "p.adjust",  foldchange = test$processedData$ranked,  # Si vous avez des fold changes, vous pouvez les inclure ici
 # pointSize = 3,
-# labelSize = 3)
+#labelSize = 3)
 
 
 #geneSetsSignificant = test$enrichment@geneSets[names(test$enrichment@geneSets)%in%test$enrichment$ID]
