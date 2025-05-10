@@ -1,0 +1,118 @@
+<div style="font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; line-height: 1.6;">
+    <h1 style="color: #384246; text-align: center; padding-bottom: 10px; border-bottom: 2px solid #7e3535;"><b>Functional Enrichment Analysis Methods</b></h1>
+    
+    <div style="margin: 20px 0;">
+        <p>Functional enrichment analysis is a powerful approach used to interpret large-scale genomic and transcriptomic data. It identifies biological annotations that are over-represented in a gene list relative to a reference background. This analysis helps researchers understand the biological significance of their experimental results, particularly when dealing with high-throughput 'omics' data that generate thousands of genes simultaneously.</p>
+        
+        <p>When analyzing differential gene expression (from RNA-seq or microarray experiments), GWAS results, ChIP-seq data, or other omics approaches, the final stage is often a ranked list of "interesting" biomolecules. Functional enrichment analysis helps to make biological sense of these lists by identifying which functions or pathways are particularly represented.</p>
+    </div>
+    
+    <div style="margin: 30px 0; padding: 25px; background-color: #f9f9f9; border-radius: 5px; border-left: 8px solid #E69F00; width: 95%;">
+        <h2 style="color: #384246;">Gene Set Enrichment Analysis (GSEA)</h2>
+        
+        <h3 style="color: #E69F00;">What is GSEA?</h3>
+        <p>Gene Set Enrichment Analysis (GSEA) is a computational method that determines whether a predefined set of genes shows statistically significant differences between two biological states. Unlike methods that focus only on significantly differentially expressed genes, GSEA considers the entire ranked list of genes from an experiment without arbitrary significance cutoffs.</p>
+        
+        <h3 style="color: #E69F00;">How GSEA Works</h3>
+        <ol style="padding-left: 20px;">
+            <li>All genes are ranked based on their differential expression (or other metric) between two conditions (e.g., tumor versus normal).</li>
+            <li>For each predefined gene set, GSEA evaluates how its members are distributed across the ranked list.</li>
+            <li>An enrichment score (ES) is calculated by walking down the ranked list, increasing a running-sum statistic when a gene belongs to the set and decreasing it when it doesn't.</li>
+            <li>The statistical significance of the ES is determined through permutation testing.</li>
+        </ol>
+        
+        <h3 style="color: #E69F00;">Advantages of GSEA</h3>
+        <ul style="padding-left: 20px;">
+            <li>Considers all genes' expression changes, not just those deemed statistically significant.</li>
+            <li>Can detect modest but coordinated changes in expression across a gene set.</li>
+            <li>Less dependent on arbitrary significance thresholds.</li>
+            <li>Particularly valuable when individual gene expression changes are subtle but consistent across a pathway.</li>
+            <li>Can be used with incomplete gene annotations, making it suitable for non-model organisms.</li>
+        </ul>
+        
+        <h3 style="color: #E69F00;">When to Use GSEA</h3>
+        <ul style="padding-left: 20px;">
+            <li>When you want to detect coordinated but subtle changes across functionally related genes.</li>
+            <li>When your study might be underpowered or has quality control issues.</li>
+            <li>When you want to answer: "These changes I see between treatment and control are similar to which known list of changes?"</li>
+            <li>GSEA is particularly useful for analyzing cellular pathways, which represent a higher level of integration than individual GO terms.</li>
+        </ul>
+    </div>
+    
+    <div style="margin: 30px 0; padding: 25px; background-color: #f9f9f9; border-radius: 5px; border-left: 8px solid #7e3535; width: 95%;">
+        <h2 style="color: #384246;">Over-Representation Analysis (ORA)</h2>
+        
+        <h3 style="color: #7e3535;">What is ORA?</h3>
+        <p>Over-Representation Analysis (ORA), also known as Singular Enrichment Analysis (SEA), is a statistical method that examines whether genes belonging to a specific functional category appear more frequently in a predefined list of genes (typically differentially expressed genes) than would be expected by chance.</p>
+        
+        <h3 style="color: #7e3535;">How ORA Works</h3>
+        <ol style="padding-left: 20px;">
+            <li>A list of "interesting" genes is defined, typically based on statistical significance (e.g., differentially expressed genes with p < 0.05).</li>
+            <li>For each functional category or pathway, a statistical test is performed to determine if the category is overrepresented in the gene list.</li>
+            <li>The null hypothesis is that genes in the list are picked at random from the total gene population.</li>
+            <li>Statistical tests such as Fisher's exact test, chi-squared test, or hypergeometric test are applied.</li>
+            <li>The resulting p-values are adjusted for multiple testing.</li>
+            <li>Enriched categories are identified based on their statistical significance.</li>
+        </ol>
+        
+        <h3 style="color: #7e3535;">Advantages of ORA</h3>
+        <ul style="padding-left: 20px;">
+            <li>Conceptually straightforward and easy to interpret.</li>
+            <li>Computationally efficient and can be quickly performed in web-based tools.</li>
+            <li>Works well when there are clear differential expression signals.</li>
+            <li>Specific to the organism being studied when using a proper background.</li>
+        </ul>
+        
+        <h3 style="color: #7e3535;">Limitations of ORA</h3>
+        <ul style="padding-left: 20px;">
+            <li>Requires an arbitrary threshold to select the gene list (risk of missing potentially enriched functions).</li>
+            <li>Does not account for the magnitude of expression changes (fold change).</li>
+            <li>Assumes genes are independent and have an equal effect on biological processes, which is not always biologically accurate.</li>
+            <li>Requires well-annotated organisms (challenging for non-model organisms).</li>
+        </ul>
+        
+        <h3 style="color: #7e3535;">When to Use ORA</h3>
+        <ul style="padding-left: 20px;">
+            <li>When you have a well-defined list of significant genes and want to know which pathways they're involved in.</li>
+            <li>When you need quick results that are easy to interpret.</li>
+            <li>When you want to answer: "Which pathways are overrepresented in my list of significant genes?"</li>
+            <li>When working with well-annotated organisms.</li>
+        </ul>
+    </div>
+    
+    <div style="margin: 30px 0; padding: 25px; background-color: #f9f9f9; border-radius: 5px; border-left: 8px solid #384246; width: 95%;">
+        <h2 style="color: #384246;">Gene Ontology and Pathways</h2>
+        
+        <h3 style="color: #384246;">Gene Ontology (GO)</h3>
+        <p>The Gene Ontology (GO) is a major bioinformatics initiative that provides structured, controlled vocabularies to describe gene functions across all species. GO is organized into three main domains:</p>
+        <ul style="padding-left: 20px;">
+            <li><strong>Biological Process (BP)</strong>: A recognized series of events or molecular functions, such as "cell division" or "DNA repair."</li>
+            <li><strong>Molecular Function (MF)</strong>: The elemental activities of a gene product at the molecular level, such as "catalytic activity" or "DNA binding."</li>
+            <li><strong>Cellular Component (CC)</strong>: The locations in the cell where a gene product performs its function, such as "nucleus" or "mitochondrion."</li>
+        </ul>
+        <p>GO terms are hierarchically organized, moving from general to specific concepts, allowing for varying levels of detail in functional analysis. You can choose the level of GO terms to analyze, depending on how specific you want the functional annotations to be.</p>
+        
+        <h3 style="color: #384246;">Biological Pathways</h3>
+        <p>Biological pathways represent a series of interactions between molecules in a cell that lead to a certain product or change in the cell. Unlike GO terms which describe individual gene functions, pathways describe how genes work together to accomplish biological processes.</p>
+        <p>Common pathway databases used in enrichment analysis include:</p>
+        <ul style="padding-left: 20px;">
+            <li><strong>KEGG</strong> (Kyoto Encyclopedia of Genes and Genomes): A collection of manually drawn pathway maps representing molecular interactions and reaction networks.</li>
+            <li><strong>Reactome</strong>: A free, open-source, curated and peer-reviewed pathway database.</li>
+            <li><strong>WikiPathways</strong>: An open, collaborative platform for capturing and disseminating biological pathways.</li>
+            <li><strong>BioCarta</strong>: A collection of dynamic graphic models that represent molecular relationships and pathways.</li>
+        </ul>
+        <p>Pathway enrichment analysis helps identify which biological pathways are activated or suppressed in experimental conditions, providing a systems-level interpretation of gene expression changes.</p>
+    </div>
+    
+    <div style="margin: 30px 0; padding: 25px; background-color: #f2f2f2; border-radius: 5px; width: 95%;">
+        <h2 style="color: #384246; text-align: center;">Choosing Between GSEA and ORA</h2>
+        <p>Both GSEA and ORA are valuable approaches for functional enrichment analysis, but they answer slightly different biological questions:</p>
+        
+        <ul style="padding-left: 20px;">
+            <li><strong style="color: #E69F00;">GSEA</strong> is preferred when you want to detect subtle but coordinated changes across gene sets and avoid arbitrary significance thresholds. It considers all genes in your experiment, making it suitable for detecting modest but consistent changes.</li>
+            <li><strong style="color: #7e3535;">ORA</strong> is useful when you have a clear set of significantly changed genes and want to quickly identify which pathways they belong to. It's more intuitive but depends on predetermined thresholds.</li>
+        </ul>
+        
+        <p>For comprehensive analysis, researchers often apply both methods to gain complementary insights into their data. The intersection of results from both approaches can provide particularly robust biological interpretations.</p>
+    </div>
+</div>
