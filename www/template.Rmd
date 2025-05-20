@@ -1,0 +1,383 @@
+---
+title: "HEATraN analysis report"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+params:
+  nGenes: 20
+  volcanoPlot: NULL
+  tableData: NULL
+  enrichmentData: NULL
+  gseaPlot: NULL
+  treePlot: NULL
+  dotPlot: NULL
+  cnetPlot: NULL
+  organismInfo: "Unspecified"
+  includeWDI: TRUE
+  includeGO: TRUE
+  includePATHWAY: TRUE
+  includeGSEAplots: FALSE
+  includePathwayViews: FALSE
+  pathwayViewPlots: NULL 
+---
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,200..1000;1,200..1000&display=swap');
+
+/* Style général du document */
+body {
+  font-family: "Mulish", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #333333;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2em;
+}
+
+/* Titres */
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Mulish", sans-serif;
+  font-weight: 700;
+  color: #7e3535;
+  margin-top: 1.5em;
+  margin-bottom: 0.8em;
+}
+
+h1 {
+  font-size: 32px;
+  border-bottom: 2px solid #D8C2C2;
+  padding-bottom: 0.3em;
+}
+
+h2 {
+  font-size: 26px;
+  border-left: 4px solid #7e3535;
+  padding-left: 10px;
+}
+
+h3 {
+  font-size: 22px;
+}
+
+/* Paragraphes */
+p {
+  font-size: 18px;
+  margin-bottom: 1.2em;
+}
+
+/* Liens */
+a {
+  color: #7e3535;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+a:hover {
+  color: #E69F00;
+  border-bottom: 1px solid #E69F00;
+}
+
+/* Tableaux */
+table {
+  width: 100%;
+  margin-bottom: 2em;
+  border-collapse: collapse;
+  font-size: 16px;
+}
+
+thead {
+  background-color: #7e3535;
+  color: white;
+}
+
+th {
+  padding: 12px 15px;
+  text-align: left;
+  font-weight: 600;
+}
+
+td {
+  padding: 10px 15px;
+  border-bottom: 1px solid #D8C2C2;
+}
+
+tbody tr:hover {
+  background-color: rgba(75, 84, 88, 0.1);
+}
+
+/* Style pour les données en surbrillance */
+.highlighted {
+  background-color: rgba(126, 53, 53, 0.1);
+}
+
+/* Blocs de code */
+pre {
+  background-color: #f5f5f5;
+  border-left: 4px solid #E69F00;
+  padding: 12px 15px;
+  font-size: 15px;
+  overflow-x: auto;
+}
+
+code {
+  font-family: Consolas, Monaco, "Courier New", monospace;
+  font-size: 90%;
+  background-color: #f5f5f5;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+/* Figures et images */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  border: 1px solid #D8C2C2;
+  padding: 5px;
+}
+
+.figure {
+  text-align: center;
+  margin: 2em 0;
+}
+
+.caption {
+  font-style: italic;
+  font-size: 90%;
+  color: #555;
+  margin-top: 8px;
+}
+
+/* Notes de bas de page */
+.footnotes {
+  border-top: 1px solid #D8C2C2;
+  font-size: 16px;
+  padding-top: 1em;
+  margin-top: 3em;
+}
+
+/* Table des matières */
+#TOC {
+  background-color: #f8f8f8;
+  border: 1px solid #D8C2C2;
+  border-left: 5px solid #7e3535;
+  padding: 1em;
+  margin-bottom: 2em;
+}
+
+#TOC a {
+  color: #333333;
+  border-bottom: none;
+}
+
+#TOC a:hover {
+  color: #7e3535;
+  text-decoration: none;
+}
+
+/* Blocs de notes */
+.note {
+  background-color: #f9f9f9;
+  border-left: 4px solid #E69F00;
+  padding: 15px;
+  margin: 20px 0;
+}
+
+/* Style pour les sections spéciales */
+.section {
+  margin-top: 2em;
+  margin-bottom: 2em;
+}
+
+/* Style pour l'en-tête du document */
+.header {
+  text-align: center;
+  margin-bottom: 3em;
+}
+
+.title {
+  font-size: 38px;
+  font-weight: 800;
+  color: #7e3535;
+  margin-bottom: 0.5em;
+}
+
+.author, .date {
+  font-size: 18px;
+  font-style: italic;
+  margin-bottom: 0.5em;
+}
+
+/* Style d'impression */
+@media print {
+  body {
+    font-size: 12pt;
+    line-height: 1.4;
+    padding: 0;
+  }
+  
+  a {
+    color: #000000 !important;
+  }
+  
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+  
+  table, figure {
+    page-break-inside: avoid;
+  }
+}
+
+
+</style>
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(knitr)
+library(DT)
+```
+
+# Analysis overview
+
+This report contains the results of the HEATraN analysis carried out on `r format(Sys.time(), '%d %B, %Y')`.
+
+**Organism studied**: `r params$organismInfo`
+
+## Volcano Plot
+
+```{r echo=FALSE, fig.width=8, fig.height=6}
+if (!is.null(params$volcanoPlot) & params$includeWDI) {
+  params$volcanoPlot
+} else if (params$includeWDI) {
+  plot(1, type="n", axes=FALSE, xlab="", ylab="")
+  text(1, 1, "No volcano plot data available")
+}
+```
+
+## Selected data table
+
+```{r echo=FALSE}
+if (!is.null(params$tableData) & (nrow(params$tableData) > params$nGenes) & params$includeWDI) {
+  kable(head(params$tableData, params$nGenes), caption = paste("Top", params$nGenes, "selected genes"))
+} else if (params$includeWDI) {
+  cat("No data available")
+}
+```
+
+## Metabolic pathway analysis results
+
+```{r echo=FALSE}
+if (!is.null(params$enrichmentData) & params$includePATHWAY) {
+  cat("### Analysis parameters\n")
+  cat(sprintf("Organism: %s\n", params$enrichmentData$parameters$organism))
+  cat(sprintf("Analysis method: %s\n", params$enrichmentData$parameters$analysis))
+  cat(sprintf("Database: %s\n", params$enrichmentData$parameters$DB))
+  cat("### Enriched pathways\n")
+  kable(params$enrichmentData$enrichment, caption = "Pathway enrichment results")
+} else if (params$includePATHWAY) {
+  cat("No metabolic pathway analysis data available")
+}
+```
+
+```{r echo=FALSE, fig.width=6, fig.height=10}
+if (!is.null(params$dotPlot) & params$includePATHWAY) {
+cat("### Dot plot\n")
+print(params$dotPlot)
+}
+```
+
+```{r echo=FALSE, fig.width=8, fig.height=10}
+if (!is.null(params$treePlot) & params$includePATHWAY) {
+cat("### Tree plot\n")
+print(params$treePlot)
+}
+```
+
+```{r echo=FALSE, fig.width=10, fig.height=6}
+if (!is.null(params$cnetPlot) & params$includePATHWAY) {
+cat("### CNET plot\n")
+print(params$cnetPlot)
+}
+```
+
+```{r echo=FALSE, fig.width=10, fig.height=6}
+
+if (!is.null(params$gseaPlot) & params$includePATHWAY & params$includeGSEAplots) {
+  cat("### GSEA plots\n\n")
+  data <- params$enrichmentData$enrichment
+  db <- params$enrichmentData$parameters$DB
+  for (i in 1:length(params$gseaPlot)) {
+    # Extraction des informations du pathway
+    if(db == "KEGG") {
+      pathway_name <- data$ID[i]
+      pathway_id <- data$ID[i]
+    } else if(db == "Reactome") {
+      pathway_name <- data$Description[i]
+      pathway_id <- data$ID[i]
+    } else {
+      pathway_name <- ifelse(!is.null(data$Description[i]), data$Description[i], data$ID[i])
+      pathway_id <- data$ID[i]
+    }
+    
+    # Récupération des p-valeurs et q-valeurs
+    p_value <- ifelse(!is.null(data$pvalue[i]),
+                      sprintf("%.4e", data$pvalue[i]),
+                      ifelse(!is.null(data$p.adjust[i]),
+                             sprintf("%.4e", data$p.adjust[i]),
+                             "NA"))
+    q_value <- ifelse(!is.null(data$qvalue[i]),
+                      sprintf("%.4e", data$qvalue[i]),
+                      ifelse(!is.null(data$qvalues[i]),
+                             sprintf("%.4e", data$qvalues[i]),
+                             "NA"))
+    
+    # Utiliser une présentation Markdown correcte
+    cat(paste0("#### ", pathway_name, "\n\n"))
+    cat(paste0("**ID**: ", pathway_id, "\n\n"))
+    cat(paste0("**p-value**: ", p_value, "\n\n"))
+    cat(paste0("**q-value**: ", q_value, "\n\n"))
+    
+    print(params$gseaPlot[[i]])
+    cat("\n\n")
+  }
+}
+```
+
+```{r echo=FALSE, fig.width=10, fig.height=8}
+if (!is.null(params$pathwayViewPlots) && params$includePATHWAY && params$includePathwayViews) {
+  cat("### Pathway Visualization\n\n")
+  data <- params$enrichmentData$enrichment
+  db <- params$enrichmentData$parameters$DB
+  
+  # Charger la bibliothèque grid pour rendre les images
+  library(grid)
+  
+  for (i in 1:length(params$pathwayViewPlots)) {
+    if(!is.null(params$pathwayViewPlots[[i]])) {
+      # Extraire le nom de la voie métabolique
+      if(db == "KEGG") {
+        pathway_name <- data$ID[i]
+      } else if(db == "Reactome") {
+        pathway_name <- data$Description[i]
+      } else {
+        pathway_name <- ifelse(!is.null(data$Description[i]), data$Description[i], data$ID[i])
+      }
+      
+      cat(paste0("#### ", pathway_name, "\n\n"))
+      
+      # Utiliser grid.raster pour afficher l'image correctement
+      grid.newpage()
+      grid.raster(params$pathwayViewPlots[[i]])
+      
+      cat("\n\n")
+    }
+  }
+}
+```
