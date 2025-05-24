@@ -210,12 +210,13 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                       ),
                       
                       # Onglet 2: Résultats Analyse GO - séparer Up-regulated, Down-regulated et Both
-                      tabPanel("Résultats Analyse GO", tabName = "GO_results", 
+                      tabPanel(
+                        "Résultats Analyse GO",
                         fluidRow(
                           tabBox(
                             title = "Résultats Analyse GO",
                             width = 12,
-                            id = "gotabset2",
+                            id = "go_results_tabs",
                             
                             # Onglet Up-regulated
                             tabPanel("Up-regulated",

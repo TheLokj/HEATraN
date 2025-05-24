@@ -422,6 +422,8 @@ function(input, output, session) {
 
   # GO Analysis reactive values
   goResults <- reactiveVal(NULL)
+  # Reactive value for GSEA results
+  gseaResults <- reactiveVal(NULL)
   
   observeEvent(input$go_analysisButton, {
     req(preprocessedData())
@@ -452,8 +454,26 @@ function(input, output, session) {
       
       # Méthode d’analyse : ORA ou GSEA
       if ("Gene Set Enrichment Analysis (GSEA)" %in% input$go_analysisMethodChoice) {
-        # GSEA à implémenter ici
+        df <- preprocessedData()
+        gene_list <- df$Log2FC
+        names(gene_list) <- df$GeneID
+        gene_list <- sort(na.omit(gene_list), decreasing = TRUE)
         
+        #analyse GSEA
+        gsea_result <- gseGO(
+          geneList      = gene_list,
+          OrgDb         = get(input$organism),  
+          ont           = input$inputGO,        
+          keyType       = "ENSEMBL",
+          pvalueCutoff  = input$go_pval,
+          verbose       = FALSE
+        )
+        
+     
+        
+        gseaResults(gsea_result) 
+       
+ 
       } else {
         # ORA selon les sélections
         analyze_up <- "Over expressed DEG" %in% input$go_oraChoice
@@ -808,6 +828,32 @@ output$exportReport <- downloadHandler(
   filename = function() {
     paste0("HEATraN_results_", Sys.Date(), ".html")
   },
+  # GSEA Dotplot
+  output$gseaDotplot <- renderPlot({
+    req(gseaResults())
+    dotplot(gseaResults())
+  })
+  
+  # GSEA Enrichment plot (top term)
+  output$gseaEnrichmentPlot <- renderPlot({
+   req(gseaResults())
+   top_term <- gseaResults()@result$ID[1]
+   gseaplot(gseaResults(), by = "all", geneSetID = top_term)
+#    gseaplot2(gseaResults(), geneSetID = top_term)
+  }) 
+  #GSEA RIDGE PLOT
+  # GSEA Ridgeplot
+  output$gseaRidgeplot <- renderPlot({
+    req(gseaResults())
+    ridgeplot(gseaResults(), showCategory = 13)
+  })
+  
+  # GSEA TABLE
+  output$gseaTable <- DT::renderDT({
+    req(gseaResults())
+    DT::datatable(as.data.frame(gseaResults()), options = list(pageLength = 10))
+  })
+  
   
   content = function(file) {
     tempReport <- file.path(tempdir(), "template.Rmd")
