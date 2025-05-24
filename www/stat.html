@@ -1,0 +1,192 @@
+<div style="font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; line-height: 1.6;">
+    <h1 style="color: #384246; text-align: center; padding-bottom: 10px; border-bottom: 2px solid #7e3535;"><b>Statistical Approaches in Functional Enrichment Analysis</b></h1>
+    
+    <div style="margin: 20px 0;">
+        <p>Functional enrichment analysis relies on statistical methods to identify biological annotations that are significantly over-represented in a gene list. Understanding the statistical principles behind these methods is crucial for proper interpretation of results and for choosing the appropriate approach for your data.</p>
+        
+        <p>This document explains the statistical foundations of the two main approaches to functional enrichment analysis: Over-Representation Analysis (ORA) and Gene Set Enrichment Analysis (GSEA).</p>
+    </div>
+    
+    <div style="margin: 30px 0; padding: 25px; background-color: #f9f9f9; border-radius: 5px; border-left: 8px solid #7e3535; width: 95%;">
+        <h2 style="color: #384246;">Statistics in Over-Representation Analysis (ORA)</h2>
+        
+        <h3 style="color: #7e3535;">Contingency Table Approach</h3>
+        <p>ORA uses a contingency table to compare the frequency of genes from a particular functional category in the test set versus the background. The analysis is typically based on a 2×2 contingency table:</p>
+        
+        <table style="border-collapse: collapse; width: 80%; margin: 20px auto; text-align: center;">
+            <tr>
+                <td style="border: 1px solid #7e3535; padding: 10px;"></td>
+                <td style="border: 1px solid #7e3535; padding: 10px;"><strong>In gene list</strong></td>
+                <td style="border: 1px solid #7e3535; padding: 10px;"><strong>Not in gene list</strong></td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #7e3535; padding: 10px;"><strong>In category</strong></td>
+                <td style="border: 1px solid #7e3535; padding: 10px;">k</td>
+                <td style="border: 1px solid #7e3535; padding: 10px;">M - k</td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #7e3535; padding: 10px;"><strong>Not in category</strong></td>
+                <td style="border: 1px solid #7e3535; padding: 10px;">n - k</td>
+                <td style="border: 1px solid #7e3535; padding: 10px;">N - M - (n - k)</td>
+            </tr>
+        </table>
+        
+        <p>Where:</p>
+        <ul style="padding-left: 20px;">
+            <li><strong>N</strong> = total number of genes in the background (e.g., all genes in the genome)</li>
+            <li><strong>M</strong> = total number of genes in the category of interest</li>
+            <li><strong>n</strong> = total number of genes in the gene list</li>
+            <li><strong>k</strong> = number of genes from the gene list in the category</li>
+        </ul>
+        
+        <h3 style="color: #7e3535;">Statistical Tests</h3>
+        <p>Several statistical tests can be applied to this contingency table:</p>
+        
+        <h4 style="color: #7e3535;">1. Hypergeometric Test</h4>
+        <p>The most commonly used test in ORA. It calculates the probability of observing at least k genes from the category in the gene list by chance:</p>
+        <p style="text-align: center; font-family: 'Courier New', monospace;">P(X ≥ k) = Σ(i=k to min(n,M)) [ (M choose i) * (N-M choose n-i) / (N choose n) ]</p>
+        <p>This test is also known as the one-tailed Fisher's exact test when testing for over-representation.</p>
+        
+        <h4 style="color: #7e3535;">2. Fisher's Exact Test</h4>
+        <p>Fisher's exact test calculates the exact probability of observing the given contingency table, or one more extreme, under the null hypothesis that category membership is independent of gene list membership.</p>
+        
+        <h4 style="color: #7e3535;">3. Chi-squared Test</h4>
+        <p>For larger sample sizes, a chi-squared test can be used as an approximation of the hypergeometric test.</p>
+        
+        <h3 style="color: #7e3535;">Null Hypothesis</h3>
+        <p>The null hypothesis in ORA is that the genes in the list are picked at random from the total gene population. In other words, there is no association between category membership and gene list membership.</p>
+        
+        <h3 style="color: #7e3535;">Multiple Testing Correction</h3>
+        <p>Because ORA typically tests many functional categories simultaneously, p-values must be adjusted for multiple testing to control the false discovery rate. Common methods include:</p>
+        <ul style="padding-left: 20px;">
+            <li><strong>Bonferroni correction</strong>: Controls the family-wise error rate by multiplying each p-value by the number of tests.</li>
+            <li><strong>Benjamini-Hochberg (BH) procedure</strong>: Controls the false discovery rate by ranking p-values and adjusting them based on their rank.</li>
+            <li><strong>False Discovery Rate (FDR)</strong>: Estimates the proportion of false positives among all significant findings.</li>
+        </ul>
+    </div>
+    
+    <div style="margin: 30px 0; padding: 25px; background-color: #f9f9f9; border-radius: 5px; border-left: 8px solid #E69F00; width: 95%;">
+        <h2 style="color: #384246;">Statistics in Gene Set Enrichment Analysis (GSEA)</h2>
+        
+        <h3 style="color: #E69F00;">Ranked List Approach</h3>
+        <p>Unlike ORA, GSEA uses the entire ranked list of genes from an experiment, without applying a threshold. The ranking is typically based on the correlation between gene expression and the phenotype of interest.</p>
+        
+        <h3 style="color: #E69F00;">Enrichment Score Calculation</h3>
+        <p>The enrichment score (ES) is calculated by walking down the ranked list, increasing a running-sum statistic when a gene belongs to the gene set and decreasing it when it doesn't. The magnitude of the increment depends on the correlation of the gene with the phenotype.</p>
+        
+        <p>More specifically:</p>
+        <ol style="padding-left: 20px;">
+            <li>Calculate a correlation (or other ranking metric) between each gene and the phenotype.</li>
+            <li>Rank all genes based on this metric.</li>
+            <li>For each position in the ranked list, calculate a running sum that increases when a gene is in the gene set and decreases otherwise.</li>
+            <li>The enrichment score is the maximum deviation from zero encountered in this running sum.</li>
+        </ol>
+        
+        <p>Mathematically, the running sum increases by:</p>
+        <p style="text-align: center; font-family: 'Courier New', monospace;">Increment = |r_j|^p / N_R</p>
+        <p>Where:</p>
+        <ul style="padding-left: 20px;">
+            <li><strong>r_j</strong> is the correlation of gene j with the phenotype</li>
+            <li><strong>p</strong> is a parameter that typically equals 1</li>
+            <li><strong>N_R</strong> is a normalization factor</li>
+        </ul>
+        
+        <p>The running sum decreases by:</p>
+        <p style="text-align: center; font-family: 'Courier New', monospace;">Decrement = 1 / (N - N_H)</p>
+        <p>Where:</p>
+        <ul style="padding-left: 20px;">
+            <li><strong>N</strong> is the total number of genes</li>
+            <li><strong>N_H</strong> is the number of genes in the gene set</li>
+        </ul>
+        
+        <h3 style="color: #E69F00;">Statistical Significance</h3>
+        <p>The statistical significance of the enrichment score is determined through permutation testing:</p>
+        <ol style="padding-left: 20px;">
+            <li>The phenotype labels are randomly permuted.</li>
+            <li>The enrichment score is recalculated for each permutation.</li>
+            <li>The nominal p-value is the fraction of permutations that produce a larger enrichment score than the observed one.</li>
+        </ol>
+        
+        <h3 style="color: #E69F00;">Normalization and Multiple Testing</h3>
+        <p>To account for gene set size and multiple hypothesis testing:</p>
+        <ol style="padding-left: 20px;">
+            <li>The enrichment score is normalized to create a normalized enrichment score (NES) by dividing by the mean of the enrichment scores from the permutations.</li>
+            <li>False discovery rate (FDR) is estimated by comparing the tails of the observed and null distributions of the normalized enrichment scores.</li>
+        </ol>
+        
+        <h3 style="color: #E69F00;">Kolmogorov-Smirnov Statistics</h3>
+        <p>The original GSEA method uses a modified Kolmogorov-Smirnov (KS) statistic. The standard KS test compares the empirical distribution functions of two samples to determine if they come from the same distribution. In GSEA, this is adapted to compare the distribution of genes in a gene set with the distribution expected by chance.</p>
+    </div>
+    
+    <div style="margin: 30px 0; padding: 25px; background-color: #f9f9f9; border-radius: 5px; border-left: 8px solid #384246; width: 95%;">
+        <h2 style="color: #384246;">Advanced Statistical Considerations</h2>
+        
+        <h3 style="color: #384246;">Gene Independence Assumptions</h3>
+        <p>Both ORA and GSEA make assumptions about gene independence that may not hold in biological systems:</p>
+        <ul style="padding-left: 20px;">
+            <li><strong>ORA</strong> assumes that genes are sampled independently, which ignores the fact that genes often function in coordinated networks.</li>
+            <li><strong>GSEA</strong> partially addresses this by looking at coordinated changes across gene sets, but still makes assumptions about the independence of gene rankings.</li>
+        </ul>
+        
+        <h3 style="color: #384246;">Background Selection</h3>
+        <p>The choice of background gene set is critical for accurate statistical inference:</p>
+        <ul style="padding-left: 20px;">
+            <li>The background should include only genes that could potentially be detected in the experiment.</li>
+            <li>For tissue-specific experiments, it may be appropriate to use only genes expressed in that tissue as background.</li>
+            <li>Using an inappropriate background can lead to false positives or negatives.</li>
+        </ul>
+        
+        <h3 style="color: #384246;">Alternative Statistical Approaches</h3>
+        <p>Several variations and alternatives to the standard statistical tests have been proposed:</p>
+        <ul style="padding-left: 20px;">
+            <li><strong>Weighted approaches</strong> that incorporate additional information such as gene expression levels or network topology.</li>
+            <li><strong>Bayesian methods</strong> that can incorporate prior knowledge about gene functions.</li>
+            <li><strong>Modular enrichment analysis (MEA)</strong> that considers the relationships between functional terms.</li>
+            <li><strong>One-sample z-test or t-test</strong> as simpler alternatives to the Kolmogorov-Smirnov test in GSEA.</li>
+        </ul>
+    </div>
+    
+    <div style="margin: 30px 0; padding: 25px; background-color: #f2f2f2; border-radius: 5px; width: 95%;">
+        <h2 style="color: #384246; text-align: center;">Statistical Comparison of ORA and GSEA</h2>
+        
+        <table style="width: 90%; margin: 20px auto; border-collapse: collapse; text-align: left;">
+            <tr style="background-color: #384246; color: white;">
+                <th style="padding: 10px; border: 1px solid #ddd;">Feature</th>
+                <th style="padding: 10px; border: 1px solid #ddd;">ORA</th>
+                <th style="padding: 10px; border: 1px solid #ddd;">GSEA</th>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Input requirement</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">Discrete list of genes (requires threshold)</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">Ranked list of all genes (no threshold)</td>
+            </tr>
+            <tr style="background-color: #f9f9f9;">
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Statistical test</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">Fisher's exact test, hypergeometric, chi-squared</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">Modified Kolmogorov-Smirnov, permutation testing</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Null hypothesis</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">Genes in list are random sample from background</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">Gene set members are randomly distributed in ranked list</td>
+            </tr>
+            <tr style="background-color: #f9f9f9;">
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Multiple testing correction</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">Bonferroni, FDR, Benjamini-Hochberg</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">FDR based on permutation</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Sensitivity to threshold</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">High - results change with threshold</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">Low - no threshold required</td>
+            </tr>
+            <tr style="background-color: #f9f9f9;">
+                <td style="padding: 10px; border: 1px solid #ddd;"><strong>Use of expression magnitude</strong></td>
+                <td style="padding: 10px; border: 1px solid #ddd;">No - only uses gene membership</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">Yes - incorporates correlation with phenotype</td>
+            </tr>
+        </table>
+        
+        <p>While both methods have their strengths and weaknesses, they often complement each other. The choice between ORA and GSEA should be guided by the specific research question, the characteristics of the dataset, and the biological context.</p>
+    </div>
+</div>

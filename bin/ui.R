@@ -1,9 +1,11 @@
-# Developed by LESAGE Louison (@thelokj).
+# Developed by DAHER Rayan, NAIT EL DJOUDI Lamia & LESAGE Louison (@thelokj).
+# rayan.daher@univ-rouen.fr
+# lamia.nait-el-djoudi@univ-rouen.fr
 # louison.lesage@univ-rouen.fr
-# Student at Rouen Normandy University
-# University project 2024-2025
-# Last updated : 18/11/2024
-# HEATraN version 0.2.0-a.5
+# Students at Rouen Normandy University
+# Master of Bioinformatics, class M2.2 BIMS 2026 
+# Last updated : 13/05/2025
+# HEATraN version 0.3.0
 
 # Theme definition
 HEATraN_theme <- create_theme(
@@ -11,6 +13,9 @@ HEATraN_theme <- create_theme(
     red = "#7e3535"
   )
 )
+
+fea_page <- readChar("../www/doc.html", file.info("../www/doc.html")$size)
+stat_page <- readChar("../www/stat.html", file.info("../www/stat.html")$size)
 
 # -----------------------------------------
 # Dashboard creation
@@ -22,12 +27,28 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
               # -----------------------------------------
               sidebar <- dashboardSidebar(
                 
-                sidebarMenu(
-                  menuItem("Home", tabName = "HOME", icon = icon("home"))),
+                sidebarMenu(menuItem("Home", tabName = "HOME", icon = icon("home"))),
+                
+                # Reference organism selection
+                selectInput("species", "Select organism name:",
+                            c("Homo sapiens",
+                              "Mus musculus",
+                              "Rattus norvegicus",
+                              "Drosophila melanogaster",
+                              "Escherichia coli (strain K12)",
+                              "Saccharomyces cerevisiae",
+                              "Danio rerio",
+                              "Caenorhabditis elegans",
+                              "Arabidopsis thaliana",
+                              "Gallus gallus",
+                              "Sus scrofa",
+                              "Canis lupus familiaris",
+                              "Bos taurus",
+                              "Xenopus laevis")),
                 
                 # File importation: csv, tsv, xls and xlsx
                 fileInput("tableInput", 
-                          "Import data",
+                          "Import associated data:",
                           accept = c(
                             "text/csv",
                             "text/tsv",
@@ -45,12 +66,15 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                 
                 # Menu
                 sidebarMenu(
+                  menuItem("Documentation", icon = icon('book', lib='glyphicon'), tabName = "DOC"),
                   menuItem("Whole Data Inspection", icon = icon('eye-open', lib='glyphicon'), tabName = "WDI"),
                   menuItem("GO Term Enrichment", icon = icon('text-background', lib='glyphicon'), tabName = "GO"),
-                  menuItem("Pathways Enrichment", icon = icon('transfer', lib='glyphicon'),  tabName = "PATH"),
-                  menuItem("About", icon = icon('info-sign', lib='glyphicon'), tabName = "ABOUT")
-                )
-              ),
+                  menuItem("Pathways Enrichment", icon = icon('transfer', lib='glyphicon'),  tabName = "PATH", 
+                           menuSubItem("Analysis", tabName = "PATH_analysis", icon = icon('flash', lib='glyphicon')),
+                           menuSubItem("Results", tabName = "PATH_results", icon = icon('search', lib='glyphicon'))),
+                  menuItem("Export results", icon = icon('share', lib='glyphicon'),  tabName = "EXPORT")
+                  )
+                ),
               
               # -----------------------------------------
               # Body tabs 
@@ -63,8 +87,32 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                 
                 tabItems(
                   tabItem(tabName = "HOME",
-                          h2("Project home"),
-                          p("Click on the Whole Data Inspection menu to access to the second model!"),
+                          HTML('<div style="padding: 20px; max-width: 100%; box-sizing: border-box;">
+                  <b style="font-size: 40px; color:#7e3535; font-weight:900; display: block; text-align: center;">HEATraN</b>
+                  <br/>
+                  <p style="font-size: 16px; text-align: justify;">
+                      <b>HEATraN</b> (litteraly <i><b>H</b>yper-<b>E</b>xpression <b>A</b>nalysis <b>T</b>ool <b>ra</b>mpantly developed in <b>N</b>ormandy</i>) is a bioinformatics analysis tool dedicated to transcriptomic analysis. It was developed as part of a student project in the Bioinformatics Master of Rouen Normandy University under the supervision of Dauchel Hélène, Education Manager.
+                      You can find its last version on its <a style="font-weight: bold;" href="https://github.com/TheLokj/HEATraN">GitHub</a>.<br/> 
+                  </p>
+                  <br/>
+                  <div style="text-align: center;">
+                       <img src="logo.png" style="max-width: 35%; height: auto;" alt="HEATraN logo">
+                  </div>
+                  <br/>
+                  <div style="text-align: center; font-size: 16px;">
+                      <em>HEATraN by DAHER Rayan, NAIT EL DJOUDI Lamia, LESAGE Louison. University of Rouen Normandy.</em>
+                  </div>
+                  <br/>
+                  <div style="text-align:right; position: fixed; bottom: 20px; right: 20px; font-size: 16px; background-color: white; font-size: 12px; padding: 10px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                      <em>0.2.0-a.5</em>
+                  </div>
+              </div>'),
+                          
+                  ),
+                  tabItem(tabName = "DOC",
+                          tabsetPanel(id="doctab", 
+                                      tabPanel(title="Functional Enrichment Analysis", HTML(fea_page)),
+                                      tabPanel(title="Statistics", HTML(stat_page)))
                   ),
                   
                   # Whole Data Inspection tab
@@ -94,7 +142,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                               title = HTML("<b>Selection options</b>"), side = "right",
                               id = "tabset2", height = "500px",
                               htmlOutput("InfoSelect"),
-                              sliderInput("pval", "Maximum p-value", min = 0, max = 1, value = 0.05, round=F),
+                              sliderInput("pval", "Maximum ajusted p-value", min = 0, max = 1, value = 0.05, round=F),
                               sliderInput("Log2FC", "Minimum absolute log2(FoldChange)", min = 0, max = 1, value = 0),
                               actionButton("SelectAll", "Select all data", icon=icon('search', lib='glyphicon')),
                               actionButton("ResetButton", "Reset selection", icon=icon('refresh', lib='glyphicon')),
@@ -251,17 +299,101 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                   ,
                   
                   # Pathways Enrichment tab, WIP
-                  tabItem(tabName = "PATH",
-                          h2("Pathways Enrichment")
-                  ),
-                  
-                  # Information tab
-                  tabItem(tabName = "ABOUT",
-                          h2("About"),
-                          HTML("<p><b>HEATraN</b> (litteraly <i><b>H</b>yper-<b>E</b>xpression <b>A</b>nalysis <b>T</b>ool <b>ra</b>mpantly developed in <b>N</b>ormandy</i>) is a bioinformatics analysis tool dedicated to transcriptomic analysis. It was developed as part of a student project in the Bioinformatics Master of Rouen Normandy University.</p>
-                               <br/><img src='logo.png' class='center' width='512' alt='HEATraN logo'>
-                               <br/><p>You can find its last version on its <a style='font-weight: bold;', href='https://github.com/TheLokj/HEATraN'>GitHub</a>.<br/></p>
-                               <i style='text-align:right'> Current version : 0.2.0-a.5.</i>")
+                  tabItem(tabName = "PATH_analysis", h2("Pathway enrichment"),
+                                     fluidRow (
+                                       box(
+                                         title = HTML("<i>Analysis parameters</i>"),
+                                         id = "boxPathwayparamers", width = 12,
+                                         sliderInput("pvalPathway", "Select an adjusted p-value cutoff", min = 0, max = 1, value = 0.05, round=F),
+                                         radioButtons("analysisMethodChoice", "Analysis method", choices = list("Over Representation Analysis (ORA)"="ORA", "Gene Set Enrichment Analysis (GSEA)"="GSEA"), selected = NULL,
+                                                      inline = TRUE, width = NULL),
+                                         checkboxGroupInput("oraChoice", "Interest for ORA method", choices = list("Under expressed DEG"="down", "Over expressed DEG"="up"), selected = NULL,
+                                                            inline = TRUE, width = NULL),
+                                         radioButtons("dbPathwaychoice", "Database choice", choices = c("Reactome", "KEGG"), selected = NULL,
+                                                      inline = TRUE, width = NULL),
+                                         actionButton("analysisPathwayButton", "Start analysis", icon=icon('transfer', lib='glyphicon')),
+                                       ),
+                                     )),
+                  tabItem(tabName = "PATH_results", 
+                          tabsetPanel(id="pathwaytab1", tabPanel(
+                          title="Global results",
+                          fluidRow (
+                            box(
+                            title = HTML("<b>Analysis summary</b>"),
+                            id = "analysisDescBox", width = 12,
+                            htmlOutput("analysisDesc"))
+                          ),fluidRow (
+                          box(
+                            id = "pathwaytablebox", width = 12,
+                            sliderInput("qval", "Select an adjusted p-value to reduce paths", min = 0, max = 1, value = 0.05, round=F),
+                            DT::DTOutput('pathwaytable')))),
+                          tabPanel(title="Results visualisation",
+                                   uiOutput("conditional_gsea_row"),
+                                   fluidRow (
+                                     box(
+                                       height="850px",
+                                       title = HTML("<b>Dot plot</b>"),
+                                       id = "pathwayplot1",
+                                       shinycssloaders::withSpinner(plotOutput("pathwayplotout", 
+                                                  height="800px",
+                                                  click = "plot_click",
+                                                  dblclick = "plot_dblclick",
+                                                  hover = "plot_hover",
+                                                  brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535")), type = 6, color = "#ef940b")
+                                     ),
+                                     box(
+                                       title = HTML("<b>Tree plot</b>"),
+                                       id = "pathwayplot2",
+                                       shinycssloaders::withSpinner(plotOutput("pathwayplotout2", 
+                                                  height="800px",
+                                                  click = "plot_click",
+                                                  dblclick = "plot_dblclick",
+                                                  hover = "plot_hover",
+                                                  brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535")), type = 6, color = "#ef940b")
+                                     ),
+                                   ),
+                                   fluidRow (
+                                     box(
+                                       title = HTML("<b>Gene-Concept Network</b>"),
+                                       id = "pathwayplot3", width = 12,
+                                       shinycssloaders::withSpinner(plotOutput("pathwayplotout3", 
+                                                  height="850px",
+                                                  click = "plot_click",
+                                                  dblclick = "plot_dblclick",
+                                                  hover = "plot_hover",
+                                                  brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535")), type = 6, color = "#ef940b")
+                                     ),
+                                   )
+                                     ),
+                            tabPanel(title="Pathway exploration",
+                                     box(id = "pathwayselection", height = "100px", width = 12,
+                                     selectInput("pathway", "Select a pathway:", choices="None")),
+                                     box(width = 12, uiOutput("pathway"), height = "800px")),
+                                  )
+                                ),
+                
+                  tabItem(tabName = "EXPORT",
+                          fluidRow(
+                            box(
+                              title = "Options d'export",
+                              width = 12,
+                              checkboxGroupInput("exportSections", "Sélectionnez les sections à exporter:",
+                                                 choices = list(
+                                                   "Whole Data Inspection" = "WDI",
+                                                   "GO Term Enrichment" = "GO",
+                                                   "Pathways Enrichment" = "PATHWAY"
+                                                 ),
+                                                 selected = c("WDI", "PATHWAY")
+                              ),
+                              conditionalPanel(
+                                condition = "input.exportSections.includes('PATHWAY')",
+                                checkboxInput("includeGSEA", "Include GSEA plots", value = FALSE),
+                                checkboxInput("includePathwayViews", "Include pathway visualization graphics", value = FALSE)
+                              ),
+                              numericInput("nGenesExport", "Nombre de gènes à inclure dans le tableau:", value = 20, min = 1, max = 100),
+                              downloadButton("exportReport", "Générer le rapport")
+                            )
+                          )
                   )
                 )),
               
