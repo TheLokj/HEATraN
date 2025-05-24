@@ -1,11 +1,17 @@
 ---
 title: "HEATraN analysis report"
-date: "`r format(Sys.time(), '%d %B, %Y')`"
+date: "`r format(Sys.time(), '%d %B (%H:%M), %Y')`"
 output: 
   html_document:
+    theme: default
     toc: true
-    toc_float: true
+    toc_float: 
+      collapsed: true
+      smooth_scroll: true
     number_sections: true
+    code_folding: show
+    df_print: paged
+    fig_caption: true
 params:
   nGenes: 20
   volcanoPlot: NULL
@@ -25,218 +31,567 @@ params:
 ---
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,200..1000;1,200..1000&display=swap');
+/* Palette de couleurs avec patterns subtils */
+:root {
+  --color-primary: #7e3535;
+  --color-primary-light: #a64545;
+  --color-primary-dark: #5a2525;
+  --color-secondary: #E69F00;
+  --color-secondary-light: #f4b533;
+  --color-secondary-dark: #cc8800;
+  --color-text: #2c2c2c;
+  --color-text-light: #666666;
+  --color-background: #ffffff;
+  --color-background-soft: #fafafa;
+  --color-background-warm: #fdf9f5;
+  --color-border: #e8e8e8;
+  --color-border-light: #f0f0f0;
+  --toc-width: 300px;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --border-radius: 0.5rem;
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.15);
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-/* Style général du document */
+/* Fond principal avec pattern subtil */
 body {
-  font-family: "Mulish", sans-serif;
-  font-size: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   line-height: 1.6;
-  color: #333333;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2em;
+  color: var(--color-text);
+  margin: 0;
+  padding: 0;
+  background: 
+    radial-gradient(circle at 25% 25%, rgba(126, 53, 53, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(230, 159, 0, 0.03) 0%, transparent 50%),
+    linear-gradient(135deg, #ffffff 0%, #fafafa 50%, #f5f5f5 100%);
+  background-size: 400px 400px, 400px 400px, 100% 100%;
+  background-attachment: fixed;
+  min-height: 100vh;
 }
 
-/* Titres */
-h1, h2, h3, h4, h5, h6 {
-  font-family: "Mulish", sans-serif;
-  font-weight: 700;
-  color: #7e3535;
-  margin-top: 1.5em;
-  margin-bottom: 0.8em;
-}
-
-h1 {
-  font-size: 32px;
-  border-bottom: 2px solid #D8C2C2;
-  padding-bottom: 0.3em;
-}
-
-h2 {
-  font-size: 26px;
-  border-left: 4px solid #7e3535;
-  padding-left: 10px;
-}
-
-h3 {
-  font-size: 22px;
-}
-
-/* Paragraphes */
-p {
-  font-size: 18px;
-  margin-bottom: 1.2em;
-}
-
-/* Liens */
-a {
-  color: #7e3535;
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.2s ease, color 0.2s ease;
-}
-
-a:hover {
-  color: #E69F00;
-  border-bottom: 1px solid #E69F00;
-}
-
-/* Tableaux */
-table {
+/* Pattern géométrique subtil pour le body */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
-  margin-bottom: 2em;
-  border-collapse: collapse;
-  font-size: 16px;
+  height: 100%;
+  background-image: 
+    linear-gradient(30deg, rgba(126, 53, 53, 0.02) 12%, transparent 12.5%, transparent 87%, rgba(126, 53, 53, 0.02) 87.5%, rgba(126, 53, 53, 0.02)),
+    linear-gradient(150deg, rgba(126, 53, 53, 0.02) 12%, transparent 12.5%, transparent 87%, rgba(126, 53, 53, 0.02) 87.5%, rgba(126, 53, 53, 0.02)),
+    linear-gradient(30deg, rgba(230, 159, 0, 0.015) 12%, transparent 12.5%, transparent 87%, rgba(230, 159, 0, 0.015) 87.5%, rgba(230, 159, 0, 0.015)),
+    linear-gradient(150deg, rgba(230, 159, 0, 0.015) 12%, transparent 12.5%, transparent 87%, rgba(230, 159, 0, 0.015) 87.5%, rgba(230, 159, 0, 0.015));
+  background-size: 80px 80px, 80px 80px, 60px 60px, 60px 60px;
+  pointer-events: none;
+  z-index: -1;
 }
 
-thead {
-  background-color: #7e3535;
-  color: white;
+/* Container principal qui s'adapte au TOC flottant */
+.main-container {
+  margin-left: var(--toc-width);
+  max-width: 1000px;
+  padding: var(--spacing-xl) var(--spacing-lg);
+  min-height: 100vh;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-lg);
+  margin-right: var(--spacing-lg);
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
 }
 
-th {
-  padding: 12px 15px;
-  text-align: left;
-  font-weight: 600;
-}
-
-td {
-  padding: 10px 15px;
-  border-bottom: 1px solid #D8C2C2;
-}
-
-tbody tr:hover {
-  background-color: rgba(75, 84, 88, 0.1);
-}
-
-/* Style pour les données en surbrillance */
-.highlighted {
-  background-color: rgba(126, 53, 53, 0.1);
-}
-
-/* Blocs de code */
-pre {
-  background-color: #f5f5f5;
-  border-left: 4px solid #E69F00;
-  padding: 12px 15px;
-  font-size: 15px;
-  overflow-x: auto;
-}
-
-code {
-  font-family: Consolas, Monaco, "Courier New", monospace;
-  font-size: 90%;
-  background-color: #f5f5f5;
-  padding: 2px 4px;
-  border-radius: 3px;
-}
-
-/* Figures et images */
-img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-  margin: 0 auto;
-  border: 1px solid #D8C2C2;
-  padding: 5px;
-}
-
-.figure {
-  text-align: center;
-  margin: 2em 0;
-}
-
-.caption {
-  font-style: italic;
-  font-size: 90%;
-  color: #555;
-  margin-top: 8px;
-}
-
-/* Notes de bas de page */
-.footnotes {
-  border-top: 1px solid #D8C2C2;
-  font-size: 16px;
-  padding-top: 1em;
-  margin-top: 3em;
-}
-
-/* Table des matières */
+/* Table des matières qui DÉFILE avec la page */
 #TOC {
-  background-color: #f8f8f8;
-  border: 1px solid #D8C2C2;
-  border-left: 5px solid #7e3535;
-  padding: 1em;
-  margin-bottom: 2em;
+  position: static !important; /* Permet le défilement avec la page */
+  float: left !important;
+  width: var(--toc-width) !important;
+  margin-right: var(--spacing-lg) !important;
+  margin-top: var(--spacing-lg) !important;
+  margin-bottom: var(--spacing-lg) !important;
+  background: 
+    linear-gradient(135deg, rgba(126, 53, 53, 0.95) 0%, rgba(90, 37, 37, 0.98) 100%),
+    radial-gradient(circle at 30% 30%, rgba(230, 159, 0, 0.1) 0%, transparent 50%) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: var(--border-radius) !important;
+  padding: 0 !important;
+  overflow-y: visible !important; /* Permet au contenu de déborder naturellement */
+  overflow-x: hidden !important;
+  box-shadow: var(--shadow-lg) !important;
+  z-index: 100 !important;
+  min-height: fit-content !important;
+  max-height: none !important;
+}
+
+/* En-tête du TOC */
+#TOC::before {
+  content: "Table des matières";
+  display: block !important;
+  background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-secondary-dark) 100%) !important;
+  color: white !important;
+  padding: var(--spacing-lg) !important;
+  margin: 0 !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  border-bottom: 3px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+}
+
+#TOC > ul {
+  padding: var(--spacing-lg) 0 var(--spacing-xl) 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  list-style: none !important;
+}
+
+#TOC ul {
+  list-style: none !important;
+  padding-left: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+}
+
+#TOC ul ul {
+  padding-left: var(--spacing-md) !important;
+  margin: var(--spacing-xs) 0 !important;
+}
+
+#TOC li {
+  margin: 0 !important;
+  background: transparent !important;
+  position: relative !important;
 }
 
 #TOC a {
-  color: #333333;
-  border-bottom: none;
+  display: block !important;
+  padding: var(--spacing-md) var(--spacing-lg) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+  font-size: 0.9rem !important;
+  border: none !important;
+  background: transparent !important;
+  transition: var(--transition) !important;
+  position: relative !important;
+  overflow: hidden !important;
 }
 
 #TOC a:hover {
-  color: #7e3535;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%) !important;
+  color: white !important;
+  transform: translateX(4px) !important;
+  font-weight: 600 !important;
+}
+
+#TOC a:focus,
+#TOC .active > a {
+  background: linear-gradient(90deg, var(--color-secondary) 0%, var(--color-secondary-light) 100%) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.2) !important;
+  border-radius: 0 var(--border-radius) var(--border-radius) 0 !important;
+}
+
+/* Style pour le TOC flottant de RMarkdown */
+.tocify {
+  position: static !important;
+  float: left !important;
+  width: var(--toc-width) !important;
+  background: 
+    linear-gradient(135deg, rgba(126, 53, 53, 0.95) 0%, rgba(90, 37, 37, 0.98) 100%) !important;
+  border-radius: var(--border-radius) !important;
+  box-shadow: var(--shadow-lg) !important;
+  margin-right: var(--spacing-lg) !important;
+  margin-top: var(--spacing-lg) !important;
+}
+
+.tocify-header {
+  color: rgba(255, 255, 255, 0.9) !important;
+  background: transparent !important;
+  padding: var(--spacing-md) var(--spacing-lg) !important;
+  font-weight: 500 !important;
+  border: none !important;
+}
+
+.tocify-header:hover {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%) !important;
+  color: white !important;
+}
+
+.tocify-item.active {
+  background: linear-gradient(90deg, var(--color-secondary) 0%, var(--color-secondary-light) 100%) !important;
+}
+
+/* Typographie avec fond amélioré */
+h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin: 0 0 var(--spacing-lg) 0;
+  padding: var(--spacing-lg);
+  background: 
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(253, 249, 245, 0.9) 100%);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  border-bottom: 3px solid var(--color-secondary);
+  position: relative;
+}
+
+h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin: var(--spacing-xl) 0 var(--spacing-lg) 0;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: 
+    linear-gradient(90deg, rgba(253, 249, 245, 0.8) 0%, transparent 100%),
+    linear-gradient(135deg, rgba(126, 53, 53, 0.03) 0%, transparent 50%);
+  border-left: 4px solid var(--color-secondary);
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+  box-shadow: var(--shadow-sm);
+}
+
+h3 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin: var(--spacing-lg) 0 var(--spacing-md) 0;
+  padding-left: var(--spacing-sm);
+  border-left: 2px solid var(--color-secondary-light);
+}
+
+/* Tableaux avec texte plus GROS */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  margin: var(--spacing-lg) 0;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+}
+
+table {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+  background-color: transparent;
+  font-size: 1.1rem !important; /* TEXTE PLUS GROS */
+  table-layout: auto;
+  overflow-x: auto;
+  display: block;
+  white-space: nowrap;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+}
+
+table thead, table tbody, table tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+th {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: white;
+  font-weight: 600;
+  padding: var(--spacing-lg);
+  text-align: left;
+  font-size: 1.05rem !important; /* TEXTE PLUS GROS pour les en-têtes */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  min-width: 150px;
+  max-width: 300px;
+  word-wrap: break-word;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+td {
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border-light);
+  color: var(--color-text);
+  min-width: 150px;
+  max-width: 300px;
+  word-wrap: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 1.05rem !important; /* TEXTE PLUS GROS pour les cellules */
+  line-height: 1.5;
+}
+
+tbody tr:nth-child(even) {
+  background-color: rgba(248, 249, 250, 0.8);
+}
+
+tbody tr:hover {
+  background-color: rgba(253, 249, 245, 0.9);
+  transform: scale(1.001);
+  transition: var(--transition);
+}
+
+/* Styles spécifiques pour DT (DataTables) avec texte plus GROS */
+.dataTables_wrapper {
+  width: 100% !important;
+  overflow-x: auto;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-md);
+  box-shadow: var(--shadow-sm);
+  margin: var(--spacing-lg) 0;
+  font-size: 1.1rem !important;
+}
+
+.dataTable {
+  width: 100% !important;
+  margin: 0 !important;
+  font-size: 1.05rem !important;
+}
+
+.dataTables_scrollHead,
+.dataTables_scrollBody {
+  overflow-x: auto !important;
+}
+
+/* Navigation par onglets AMÉLIORÉE avec CODE COULEUR */
+.nav-tabs {
+  border-bottom: 3px solid var(--color-primary);
+  margin-bottom: var(--spacing-lg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  background: 
+    linear-gradient(135deg, rgba(126, 53, 53, 0.05) 0%, rgba(230, 159, 0, 0.05) 100%);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(10px);
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.nav-tabs .nav-link {
+  padding: var(--spacing-md) var(--spacing-xl);
+  border: 2px solid transparent;
+  background: 
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(253, 249, 245, 0.9) 100%);
+  color: var(--color-primary);
   text-decoration: none;
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+  font-weight: 600;
+  font-size: 0.95rem;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: max-content;
+  box-shadow: var(--shadow-sm);
 }
 
-/* Blocs de notes */
-.note {
-  background-color: #f9f9f9;
-  border-left: 4px solid #E69F00;
-  padding: 15px;
-  margin: 20px 0;
+.nav-tabs .nav-link::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(230, 159, 0, 0.2), transparent);
+  transition: left 0.4s ease;
 }
 
-/* Style pour les sections spéciales */
-.section {
-  margin-top: 2em;
-  margin-bottom: 2em;
+.nav-tabs .nav-link:hover {
+  background: 
+    linear-gradient(135deg, var(--color-background-warm) 0%, rgba(230, 159, 0, 0.15) 100%);
+  color: var(--color-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-secondary-light);
 }
 
-/* Style pour l'en-tête du document */
-.header {
+.nav-tabs .nav-link:hover::before {
+  left: 100%;
+}
+
+.nav-tabs .nav-link.active {
+  background: 
+    linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: white;
+  font-weight: 700;
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-secondary);
+  transform: scale(1.02);
+}
+
+.nav-tabs .nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 3px;
+  background: var(--color-secondary);
+  border-radius: 2px;
+}
+
+/* Contenu des onglets avec CODE COULEUR */
+.tab-content {
+  background: 
+    linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(253, 249, 245, 0.9) 100%);
+  padding: var(--spacing-xl);
+  border: 2px solid var(--color-border);
+  border-top: 3px solid var(--color-secondary);
+  border-radius: 0 var(--border-radius) var(--border-radius) var(--border-radius);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(10px);
+  animation: slideIn 0.3s ease-out;
+  overflow-x: auto;
+  max-width: 100%;
+  position: relative;
+}
+
+.tab-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-secondary) 0%, var(--color-secondary-light) 50%, var(--color-secondary) 100%);
+}
+
+.tab-pane {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* Hauteur adaptative pour les tabsets */
+.tabset-fade .tab-content {
+  min-height: 300px;
+}
+
+/* Figures avec fond amélioré */
+.figure {
+  margin: var(--spacing-xl) 0;
   text-align: center;
-  margin-bottom: 3em;
+  background: 
+    linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(253, 249, 245, 0.9) 100%);
+  border: 2px solid var(--color-border);
+  border-top: 3px solid var(--color-secondary);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(10px);
+  transition: var(--transition);
+  overflow: hidden;
+  max-width: 100%;
 }
 
-.title {
-  font-size: 38px;
-  font-weight: 800;
-  color: #7e3535;
-  margin-bottom: 0.5em;
+.figure:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  border-top-color: var(--color-secondary-light);
 }
 
-.author, .date {
-  font-size: 18px;
-  font-style: italic;
-  margin-bottom: 0.5em;
+.figure img, .figure svg, .figure canvas {
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: var(--border-radius);
 }
 
-/* Style d'impression */
-@media print {
-  body {
-    font-size: 12pt;
-    line-height: 1.4;
-    padding: 0;
+/* Code avec fond amélioré */
+pre {
+  background: 
+    linear-gradient(135deg, rgba(248, 249, 250, 0.9) 0%, rgba(253, 249, 245, 0.9) 100%);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-secondary);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  margin: var(--spacing-lg) 0;
+  overflow-x: auto;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(10px);
+  max-width: 100%;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .main-container {
+    margin-left: 0;
+    margin-right: var(--spacing-sm);
+    padding: var(--spacing-lg) var(--spacing-md);
   }
   
-  a {
-    color: #000000 !important;
+  #TOC,
+  .tocify {
+    position: static !important;
+    float: none !important;
+    width: 100% !important;
+    margin: var(--spacing-md) 0 !important;
   }
   
-  h1, h2, h3 {
-    page-break-after: avoid;
+  .nav-tabs {
+    flex-direction: column;
+    align-items: stretch;
   }
   
-  table, figure {
-    page-break-inside: avoid;
+  .nav-tabs .nav-link {
+    text-align: center;
+    margin-bottom: var(--spacing-xs);
+    padding: var(--spacing-md);
+  }
+  
+  table, .dataTables_wrapper {
+    font-size: 1rem !important;
+  }
+  
+  th, td {
+    padding: var(--spacing-md);
+    min-width: 100px;
+    max-width: 150px;
+    font-size: 0.95rem !important;
   }
 }
 
+/* Scroll bar générale */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
 
-</style>
+::-webkit-scrollbar-track {
+  background: rgba(248, 249, 250, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-secondary-dark) 100%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-secondary-light);
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}</style>
 
 ```{r echo=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
@@ -252,7 +607,7 @@ This report contains the results of the HEATraN analysis carried out on `r forma
 
 ## Volcano Plot
 
-```{r echo=FALSE, fig.width=8, fig.height=6}
+```{r echo=FALSE, fig.width=8, fig.height=6, results='asis'}
 if (!is.null(params$volcanoPlot) & params$includeWDI) {
   params$volcanoPlot
 } else if (params$includeWDI) {
@@ -263,7 +618,7 @@ if (!is.null(params$volcanoPlot) & params$includeWDI) {
 
 ## Selected data table
 
-```{r echo=FALSE}
+```{r echo=FALSE, results='asis'}
 if (!is.null(params$tableData) & (nrow(params$tableData) > params$nGenes) & params$includeWDI) {
   kable(head(params$tableData, params$nGenes), caption = paste("Top", params$nGenes, "selected genes"))
 } else if (params$includeWDI) {
@@ -273,110 +628,112 @@ if (!is.null(params$tableData) & (nrow(params$tableData) > params$nGenes) & para
 
 ## Metabolic pathway analysis results
 
-```{r echo=FALSE}
+```{r echo=FALSE, results='asis'}
 if (!is.null(params$enrichmentData) & params$includePATHWAY) {
-  cat("### Analysis parameters\n")
-  cat(sprintf("Organism: %s\n", params$enrichmentData$parameters$organism))
-  cat(sprintf("Analysis method: %s\n", params$enrichmentData$parameters$analysis))
-  cat(sprintf("Database: %s\n", params$enrichmentData$parameters$DB))
-  cat("### Enriched pathways\n")
+  cat("## Metabolic pathway analysis results\n\n")
+  
+  cat("### Analysis parameters\n\n")
+  cat(sprintf("**Organism**: %s\n\n", params$enrichmentData$parameters$organism))
+  cat(sprintf("**Analysis method**: %s\n\n", params$enrichmentData$parameters$analysis))
+  cat(sprintf("**Database**: %s\n\n", params$enrichmentData$parameters$DB))
+  
+  cat("### Enriched pathways\n\n")
   kable(params$enrichmentData$enrichment, caption = "Pathway enrichment results")
-} else if (params$includePATHWAY) {
-  cat("No metabolic pathway analysis data available")
 }
 ```
 
-```{r echo=FALSE, fig.width=6, fig.height=10}
+```{r echo=FALSE, fig.width=6, fig.height=10, results='asis'}
 if (!is.null(params$dotPlot) & params$includePATHWAY) {
 cat("### Dot plot\n")
 print(params$dotPlot)
 }
 ```
 
-```{r echo=FALSE, fig.width=8, fig.height=10}
+```{r echo=FALSE, fig.width=8, fig.height=10, results='asis'}
 if (!is.null(params$treePlot) & params$includePATHWAY) {
 cat("### Tree plot\n")
 print(params$treePlot)
 }
 ```
 
-```{r echo=FALSE, fig.width=10, fig.height=6}
+```{r echo=FALSE, fig.width=10, fig.height=6, results='asis'}
 if (!is.null(params$cnetPlot) & params$includePATHWAY) {
 cat("### CNET plot\n")
 print(params$cnetPlot)
 }
 ```
 
-```{r echo=FALSE, fig.width=10, fig.height=6}
-
-if (!is.null(params$gseaPlot) & params$includePATHWAY & params$includeGSEAplots) {
-  cat("### GSEA plots\n\n")
+```{r echo=FALSE, fig.width=10, fig.height=6, results='asis'}
+if (params$includePATHWAY && (params$includeGSEAplots || params$includePathwayViews)) {
+  cat("### Pathway Analysis {.tabset .tabset-fade}\n\n")
+  
   data <- params$enrichmentData$enrichment
   db <- params$enrichmentData$parameters$DB
-  for (i in 1:length(params$gseaPlot)) {
-    # Extraction des informations du pathway
-    if(db == "KEGG") {
-      pathway_name <- data$ID[i]
-      pathway_id <- data$ID[i]
-    } else if(db == "Reactome") {
-      pathway_name <- data$Description[i]
-      pathway_id <- data$ID[i]
-    } else {
-      pathway_name <- ifelse(!is.null(data$Description[i]), data$Description[i], data$ID[i])
-      pathway_id <- data$ID[i]
-    }
-    
-    # Récupération des p-valeurs et q-valeurs
-    p_value <- ifelse(!is.null(data$pvalue[i]),
-                      sprintf("%.4e", data$pvalue[i]),
-                      ifelse(!is.null(data$p.adjust[i]),
-                             sprintf("%.4e", data$p.adjust[i]),
-                             "NA"))
-    q_value <- ifelse(!is.null(data$qvalue[i]),
-                      sprintf("%.4e", data$qvalue[i]),
-                      ifelse(!is.null(data$qvalues[i]),
-                             sprintf("%.4e", data$qvalues[i]),
-                             "NA"))
-    
-    # Utiliser une présentation Markdown correcte
-    cat(paste0("#### ", pathway_name, "\n\n"))
-    cat(paste0("**ID**: ", pathway_id, "\n\n"))
-    cat(paste0("**p-value**: ", p_value, "\n\n"))
-    cat(paste0("**q-value**: ", q_value, "\n\n"))
-    
-    print(params$gseaPlot[[i]])
-    cat("\n\n")
+  
+  # Charger la bibliothèque grid pour les visualisations de pathways
+  if (params$includePathwayViews) {
+    library(grid)
   }
-}
-```
-
-```{r echo=FALSE, fig.width=10, fig.height=8}
-if (!is.null(params$pathwayViewPlots) && params$includePATHWAY && params$includePathwayViews) {
-  cat("### Pathway Visualization\n\n")
-  data <- params$enrichmentData$enrichment
-  db <- params$enrichmentData$parameters$DB
   
-  # Charger la bibliothèque grid pour rendre les images
-  library(grid)
+  # Déterminer le nombre d'éléments à traiter
+  n_items <- 0
+  if (params$includeGSEAplots && !is.null(params$gseaPlot)) {
+    n_items <- length(params$gseaPlot)
+  }
+  if (params$includePathwayViews && !is.null(params$pathwayViewPlots)) {
+    n_items <- max(n_items, length(params$pathwayViewPlots))
+  }
   
-  for (i in 1:length(params$pathwayViewPlots)) {
-    if(!is.null(params$pathwayViewPlots[[i]])) {
-      # Extraire le nom de la voie métabolique
+  for (i in 1:n_items) {
+    has_gsea <- params$includeGSEAplots && !is.null(params$gseaPlot) && i <= length(params$gseaPlot)
+    has_pathway_view <- params$includePathwayViews && !is.null(params$pathwayViewPlots) && 
+                        i <= length(params$pathwayViewPlots) && !is.null(params$pathwayViewPlots[[i]])
+    
+    if (has_gsea || has_pathway_view) {
+      # Extraction des informations du pathway
       if(db == "KEGG") {
         pathway_name <- data$ID[i]
+        pathway_id <- data$ID[i]
       } else if(db == "Reactome") {
         pathway_name <- data$Description[i]
+        pathway_id <- data$ID[i]
       } else {
         pathway_name <- ifelse(!is.null(data$Description[i]), data$Description[i], data$ID[i])
+        pathway_id <- data$ID[i]
       }
       
+      # Récupération des p-valeurs et q-valeurs
+      p_value <- ifelse(!is.null(data$pvalue[i]),
+                       sprintf("%.4e", data$pvalue[i]),
+                       ifelse(!is.null(data$p.adjust[i]),
+                              sprintf("%.4e", data$p.adjust[i]),
+                              "NA"))
+      q_value <- ifelse(!is.null(data$qvalue[i]),
+                       sprintf("%.4e", data$qvalue[i]),
+                       ifelse(!is.null(data$qvalues[i]),
+                              sprintf("%.4e", data$qvalues[i]),
+                              "NA"))
+      
+      # Créer un onglet pour chaque pathway
       cat(paste0("#### ", pathway_name, "\n\n"))
+      cat(paste0("**ID**: ", pathway_id, "  \n"))
+      cat(paste0("**p-value**: ", p_value, "  \n"))
+      cat(paste0("**q-value**: ", q_value, "  \n\n"))
       
-      # Utiliser grid.raster pour afficher l'image correctement
-      grid.newpage()
-      grid.raster(params$pathwayViewPlots[[i]])
+      # Afficher le plot GSEA si disponible
+      if (has_gsea) {
+        cat("##### GSEA Plot\n\n")
+        print(params$gseaPlot[[i]])
+        cat("\n\n")
+      }
       
-      cat("\n\n")
+      # Afficher la visualisation du pathway si disponible
+      if (has_pathway_view) {
+        cat("##### Pathway Visualization\n\n")
+        grid.newpage()
+        grid.raster(params$pathwayViewPlots[[i]])
+        cat("\n\n")
+      }
     }
   }
 }

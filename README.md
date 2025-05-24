@@ -53,12 +53,14 @@ From a terminal, you can enter :
 | :-- | :-- |
 | R | 4.3.3 |
 | shiny | 1.10.0 |
-| shinydashboard | 0.7.3 |
-| shinyjs | 2.1.0 |
 | shinyalert | 3.1.0 |
+| shinycssloaders | 1.1.0 |
+| shinydashboard | 0.7.3 |
 | shinydisconnect | 0.1.1 |
+| shinyjs | 2.1.0 |
 | fresh | 0.2.1 |
 | ggplot2 | 3.5.2 |
+| ggtext | 0.1.2 |
 | readxl | 1.4.5 |
 | data.table | 1.17.0 |
 | DT | 0.33 |
@@ -72,7 +74,7 @@ From a terminal, you can enter :
 | ReactomePA | 1.46.0 |
 | clusterProfiler | 4.10.1 |
 | pathview | 1.42.0 |
-| org.At.eg.db | 3.18.0 |
+| org.At.tair.db | 3.18.0 |
 | org.Bt.eg.db | 3.18.0 |
 | org.Cf.eg.db | 3.18.0 |
 | org.Gg.eg.db | 3.18.0 |

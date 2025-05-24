@@ -29,18 +29,23 @@ RUN R -e "install.packages(c( \
     'shinydashboard', \
     'shinyjs', \
     'shinyalert', \
+    'shinycssloaders', \
     'fresh', \
     'ggplot2', \
+    'ggtext', \
     'readxl', \
     'data.table', \
     'DT', \
-    'shinydisconnect'), \
+    'shinydisconnect', \
+    'ini', \
+    'fs' \
+    'knitr'), \
     repos='https://cloud.r-project.org/')"
 
 # Installation explicite des packages Bioconductor
 RUN R -e 'BiocManager::install(c("ReactomePA", "clusterProfiler", "pathview"), update=FALSE, ask=FALSE)'
 
-RUN R -e 'BiocManager::install(c("org.At.eg.db", "org.Bt.eg.db", "org.Cf.eg.db", "org.Gg.eg.db", "org.EcK12.eg.db", "org.Dm.eg.db", "org.Hs.eg.db", "org.Mm.eg.db", "org.Ss.eg.db", "org.Rn.eg.db", "org.Ce.eg.db", "org.Xl.eg.db", "org.Sc.sgd.db", "org.Dr.eg.db"))'
+RUN R -e 'BiocManager::install(c("org.At.tair.db", "org.Bt.eg.db", "org.Cf.eg.db", "org.Gg.eg.db", "org.EcK12.eg.db", "org.Dm.eg.db", "org.Hs.eg.db", "org.Mm.eg.db", "org.Ss.eg.db", "org.Rn.eg.db", "org.Ce.eg.db", "org.Xl.eg.db", "org.Sc.sgd.db", "org.Dr.eg.db"))'
 
 # Vérification de l'installation des packages Bioconductor
 RUN R -e 'library(clusterProfiler); library(ReactomePA); library(pathview); cat("Tous les packages Bioconductor sont installés correctement\n")'
@@ -57,6 +62,7 @@ COPY ./bin/ ./bin/
 COPY ./bin/fun/ ./bin/fun/
 COPY ./data/ ./data/
 COPY ./www/ ./www/
+COPY ./ ./
 
 # Définition des permissions
 RUN chmod -R 755 .

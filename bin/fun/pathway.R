@@ -25,7 +25,7 @@ library(dplyr)
 # Organism dataframe
 orgs = data.frame(organism="Homo sapiens", db="org.Hs.eg.db", commonName="human", TLname="hsa")
 orgs = rbind(orgs, data.frame(organism="Mus musculus", db="org.Mm.eg.db", commonName="mouse", TLname="mmu"))
-orgs = rbind(orgs, data.frame(organism="Arabidopsis thaliana", db="org.At.eg.db", commonName="arabidopsis", TLname="ath"))
+orgs = rbind(orgs, data.frame(organism="Arabidopsis thaliana", db="org.At.tair.db", commonName="arabidopsis", TLname="ath"))
 orgs = rbind(orgs, data.frame(organism="Bos taurus", db="org.Bt.eg.db", commonName="bovine", TLname="bta"))
 orgs = rbind(orgs, data.frame(organism="Canis lupus familiaris", db="org.Cf.eg.db", commonName="canine", TLname="cfa"))
 orgs = rbind(orgs, data.frame(organism="Gallus gallus", db="org.Gg.eg.db", commonName="chicken", TLname="gga"))
@@ -37,8 +37,6 @@ orgs = rbind(orgs, data.frame(organism="Caenorhabditis elegans", db="org.Ce.eg.d
 orgs = rbind(orgs, data.frame(organism="Xenopus laevis", db="org.Xl.eg.db", commonName="xenopus", TLname="xla"))
 orgs = rbind(orgs, data.frame(organism="Saccharomyces cerevisiae", db="org.Sc.sgd.db", commonName="yeast", TLname="sce"))
 orgs = rbind(orgs, data.frame(organism="Danio rerio", db="org.Dr.eg.db", commonName="zebrafish", TLname="dre"))
-
-
 
 # Functions
 rankFC = function(data, colId){
@@ -64,20 +62,65 @@ getKEGGpathway = function(geneList, pathwayID, organism, local=T){
   } 
 }
     
-getReactomePathway = function(rankedLog2FC, pathwayDesc, organism){
-  print(pathwayDesc)
-  print(rankedLog2FC)
-  for (i in 1:length(pathwayDesc)){
-    name = paste(gsub("[\\\\ ]", "_", pathwayDesc[i]),".png",sep="")
-    if (! name %in% list.files("./out/")){
-      try(ggplot2::ggsave(paste(getwd(), "/out/", name, sep=""), viewPathway(pathwayDesc[i], 
-                                                                          organism="mouse",
-                                                                          readable = TRUE, 
-                                                                          foldChange = rankedLog2FC[names(table(names(rankedLog2FC))[table(names(rankedLog2FC))==1])])))}
-    else {
-      message(paste(name, "already saved."))
-    }}
+getReactomePathway = function(rankedLog2FC, pathwayIDs, pathwayDesc, organism) {
+  # Création du répertoire de sortie si nécessaire
+  if (!dir.exists("./out/")) {
+    dir.create("./out/", recursive = TRUE)
+  }
   
+  # Créer un vecteur de résultats pour retourner les chemins des images générées
+  pathway_images <- list()
+  
+  # Pour chaque pathway
+  for (i in 1:length(pathwayIDs)) {
+    # Extraction de l'ID Reactome (format R-XXX-NNNNNN)
+    pathway_id <- pathwayIDs[i]
+    pathway_name <- pathwayDesc[i]
+    
+    # Création d'un nom de fichier sécurisé
+    safe_name <- gsub("[^a-zA-Z0-9]", "_", pathway_name)
+    file_name <- paste0("./out/", safe_name, ".png")
+    
+    message(paste("Processing pathway:", pathway_name, "(", pathway_id, ")"))
+    
+    # Méthode 1: Utilisation de l'API pour télécharger l'image du diagramme
+    tryCatch({
+      # URL de l'API Reactome pour les diagrammes
+      api_url <- paste0("https://reactome.org/ContentService/exporter/diagram/", 
+                        pathway_id, ".png?quality=7")
+      
+      # Téléchargement de l'image
+      download.file(api_url, file_name, mode = "wb", quiet = TRUE)
+      message(paste("Saved pathway image to:", file_name))
+      
+      # Ajouter le chemin de l'image au résultat
+      pathway_images[[i]] <- file_name
+      
+    }, error = function(e) {
+      # En cas d'échec, essayer la méthode 2 (embarquée)
+      message(paste("Failed to download from API, trying embedded method for", pathway_name))
+      
+      tryCatch({
+        # Utiliser viewPathway comme méthode de secours
+        p <- viewPathway(pathway_id,
+                         organism = organism,
+                         readable = TRUE,
+                         foldChange = rankedLog2FC)
+        
+        # Sauvegarder le graphique
+        ggplot2::ggsave(file_name, p, width = 10, height = 8)
+        message(paste("Saved pathway image using viewPathway to:", file_name))
+        
+        # Ajouter le chemin de l'image au résultat
+        pathway_images[[i]] <- file_name
+      }, error = function(e2) {
+        message(paste("Failed to generate pathway image for", pathway_name, ":", e2$message))
+        pathway_images[[i]] <- NULL
+      })
+    })
+  }
+  
+  return(pathway_images)
 }
 
 preprocessPathway = function(data, organism, DB){
@@ -125,7 +168,11 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
     if (DB == "Reactome"){
       enrichment = enrichPathway(genesList, organism=orgs[orgs$organism==organism, "commonName"], universe=data$entrezIds, pvalueCutoff = pval)
       print(enrichment)
-      getReactomePathway(data$ranked, enrichment$Description, organism=organism)
+      pathway_images <- getReactomePathway(data$ranked, 
+                                           enrichment$ID,  
+                                           enrichment$Description, 
+                                           organism=orgs[orgs$organism==organism, "commonName"])
+      enrichment$pathway_images <- pathway_images
        }
     return(list(enrichment=enrichment, processedData = data, parameters=parameters))
     }
@@ -150,8 +197,13 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
                                pvalueCutoff = pval,
                                minGSSize    = 10, #Previously 120
                                verbose      = FALSE)
-    getReactomePathway(data$ranked, enrichment$Description, organism=organism)}
+      pathway_images <- getReactomePathway(data$ranked, 
+                                           enrichment$ID,  
+                                           enrichment$Description, 
+                                           organism=orgs[orgs$organism==organism, "commonName"])
+    }
     return(list(enrichment=enrichment, processedData = data, parameters=parameters))
+    enrichment$pathway_images <- pathway_images
     }
 }
 
@@ -201,3 +253,10 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
   
 #}
 
+dir_size <- function(path, recursive = TRUE) {
+  stopifnot(is.character(path))
+  files <- list.files(path, full.names = T, recursive = recursive)
+  vect_size <- sapply(files, function(x) file.size(x))
+  size_files <- sum(vect_size)
+  size_files
+}

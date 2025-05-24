@@ -4,7 +4,7 @@
 # louison.lesage@univ-rouen.fr
 # Students at Rouen Normandy University
 # Master of Bioinformatics, class M2.2 BIMS 2026 
-# Last updated : 08/05/2025
+# Last updated : 13/05/2025
 # HEATraN version 0.3.0
 
 # Theme definition
@@ -66,7 +66,8 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                   menuItem("GO Term Enrichment", icon = icon('text-background', lib='glyphicon'), tabName = "GO"),
                   menuItem("Pathways Enrichment", icon = icon('transfer', lib='glyphicon'),  tabName = "PATH", 
                            menuSubItem("Analysis", tabName = "PATH_analysis", icon = icon('flash', lib='glyphicon')),
-                           menuSubItem("Results", tabName = "PATH_results", icon = icon('search', lib='glyphicon')))
+                           menuSubItem("Results", tabName = "PATH_results", icon = icon('search', lib='glyphicon'))),
+                  menuItem("Export results", icon = icon('share', lib='glyphicon'),  tabName = "EXPORT")
                   )
                 ),
               
@@ -81,13 +82,26 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                 
                 tabItems(
                   tabItem(tabName = "HOME",
-                          HTML("<b style='font-size:40px; color:#7e3535; font-weight:900'>HEATraN</b>
-                                <br/><br/><p><b>HEATraN</b> (litteraly <i><b>H</b>yper-<b>E</b>xpression <b>A</b>nalysis <b>T</b>ool <b>ra</b>mpantly developed in <b>N</b>ormandy</i>) is a bioinformatics analysis tool dedicated to transcriptomic analysis. It was developed as part of a student project in the Bioinformatics Master of Rouen Normandy University under the supervision of Dauchel Hélène, Education Manager.</p>
-                               <br/><br/>
-                               <br/><img src='logo.png' class='center' width='712' alt='HEATraN logo'>
-                               <br/><div style='text-align:center;'><em>HEATraN by DAHER Rayan, NAIT EL DJOUDI Lamia, LESAGE Louison. University of Rouen Normandy. </em></div>
-                               <br/><br/><br/><br/><br/><br/><br/><div style='text-align:right;'><em> You can find its last version on its <a style='font-weight: bold;', href='https://github.com/TheLokj/HEATraN'>GitHub</a>. Current version : 0.2.0-a.5. </em></div>
-                               "),
+                          HTML('<div style="padding: 20px; max-width: 100%; box-sizing: border-box;">
+                  <b style="font-size: 40px; color:#7e3535; font-weight:900; display: block; text-align: center;">HEATraN</b>
+                  <br/>
+                  <p style="font-size: 16px; text-align: justify;">
+                      <b>HEATraN</b> (litteraly <i><b>H</b>yper-<b>E</b>xpression <b>A</b>nalysis <b>T</b>ool <b>ra</b>mpantly developed in <b>N</b>ormandy</i>) is a bioinformatics analysis tool dedicated to transcriptomic analysis. It was developed as part of a student project in the Bioinformatics Master of Rouen Normandy University under the supervision of Dauchel Hélène, Education Manager.
+                      You can find its last version on its <a style="font-weight: bold;" href="https://github.com/TheLokj/HEATraN">GitHub</a>.<br/> 
+                  </p>
+                  <br/>
+                  <div style="text-align: center;">
+                       <img src="logo.png" style="max-width: 35%; height: auto;" alt="HEATraN logo">
+                  </div>
+                  <br/>
+                  <div style="text-align: center; font-size: 16px;">
+                      <em>HEATraN by DAHER Rayan, NAIT EL DJOUDI Lamia, LESAGE Louison. University of Rouen Normandy.</em>
+                  </div>
+                  <br/>
+                  <div style="text-align:right; position: fixed; bottom: 20px; right: 20px; font-size: 16px; background-color: white; font-size: 12px; padding: 10px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                      <em>0.2.0-a.5</em>
+                  </div>
+              </div>'),
                           
                   ),
                   tabItem(tabName = "DOC",
@@ -190,36 +204,36 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                    fluidRow (
                                      box(
                                        height="850px",
-                                       title = HTML("<b>Dotplot</b>"),
+                                       title = HTML("<b>Dot plot</b>"),
                                        id = "pathwayplot1",
-                                       plotOutput("pathwayplotout", 
+                                       shinycssloaders::withSpinner(plotOutput("pathwayplotout", 
                                                   height="800px",
                                                   click = "plot_click",
                                                   dblclick = "plot_dblclick",
                                                   hover = "plot_hover",
-                                                  brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535"))
+                                                  brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535")), type = 6, color = "#ef940b")
                                      ),
                                      box(
-                                       title = HTML("<b>TreePlot</b>"),
+                                       title = HTML("<b>Tree plot</b>"),
                                        id = "pathwayplot2",
-                                       plotOutput("pathwayplotout2", 
+                                       shinycssloaders::withSpinner(plotOutput("pathwayplotout2", 
                                                   height="800px",
                                                   click = "plot_click",
                                                   dblclick = "plot_dblclick",
                                                   hover = "plot_hover",
-                                                  brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535"))
+                                                  brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535")), type = 6, color = "#ef940b")
                                      ),
                                    ),
                                    fluidRow (
                                      box(
-                                       title = HTML("<b>Cnetplot</b>"),
+                                       title = HTML("<b>Gene-Concept Network</b>"),
                                        id = "pathwayplot3", width = 12,
-                                       plotOutput("pathwayplotout3", 
+                                       shinycssloaders::withSpinner(plotOutput("pathwayplotout3", 
                                                   height="850px",
                                                   click = "plot_click",
                                                   dblclick = "plot_dblclick",
                                                   hover = "plot_hover",
-                                                  brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535"))
+                                                  brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535")), type = 6, color = "#ef940b")
                                      ),
                                    )
                                      ),
@@ -228,8 +242,31 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                      selectInput("pathway", "Select a pathway:", choices="None")),
                                      box(width = 12, uiOutput("pathway"), height = "800px")),
                                   )
-                                )
+                                ),
                 
+                  tabItem(tabName = "EXPORT",
+                          fluidRow(
+                            box(
+                              title = "Options d'export",
+                              width = 12,
+                              checkboxGroupInput("exportSections", "Sélectionnez les sections à exporter:",
+                                                 choices = list(
+                                                   "Whole Data Inspection" = "WDI",
+                                                   "GO Term Enrichment" = "GO",
+                                                   "Pathways Enrichment" = "PATHWAY"
+                                                 ),
+                                                 selected = c("WDI", "PATHWAY")
+                              ),
+                              conditionalPanel(
+                                condition = "input.exportSections.includes('PATHWAY')",
+                                checkboxInput("includeGSEA", "Include GSEA plots", value = FALSE),
+                                checkboxInput("includePathwayViews", "Include pathway visualization graphics", value = FALSE)
+                              ),
+                              numericInput("nGenesExport", "Nombre de gènes à inclure dans le tableau:", value = 20, min = 1, max = 100),
+                              downloadButton("exportReport", "Générer le rapport")
+                            )
+                          )
+                  )
                 )),
               
               #Webpage title
