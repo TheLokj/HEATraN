@@ -60,15 +60,14 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                             ".tsv")),
                 
                 # Reference organism selection
-                # Ajouter des entrées pour l'ontologie et l'organisme
-                selectInput("ontology", "Ontology:", choices = c("BP", "MF", "CC")),
-                selectInput("organism", "Organism:", choices = c("org.Mm.eg.db", "org.Hs.eg.db", "org.Sc.sgd.db")),
                 
                 # Menu
                 sidebarMenu(
                   menuItem("Documentation", icon = icon('book', lib='glyphicon'), tabName = "DOC"),
                   menuItem("Whole Data Inspection", icon = icon('eye-open', lib='glyphicon'), tabName = "WDI"),
-                  menuItem("GO Term Enrichment", icon = icon('text-background', lib='glyphicon'), tabName = "GO"),
+                  menuItem("GO Term Enrichment", icon = icon('text-background', lib='glyphicon'), tabName = "GO",
+                    menuSubItem("Analysis", tabName = "GO_analysis", icon = icon('flash', lib='glyphicon')),
+                    menuSubItem("Results", tabName = "GO_results", icon = icon('search', lib='glyphicon'))),
                   menuItem("Pathways Enrichment", icon = icon('transfer', lib='glyphicon'),  tabName = "PATH", 
                            menuSubItem("Analysis", tabName = "PATH_analysis", icon = icon('flash', lib='glyphicon')),
                            menuSubItem("Results", tabName = "PATH_results", icon = icon('search', lib='glyphicon'))),
@@ -122,11 +121,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                           fluidRow (
                             box(
                               title = HTML("<b>Volcano plot</b>"),
-                              id = "volcanoplot", 
-                              height = "500px",
-                              width = 12,  # Add width argument
-                              status = "primary",  # Add status argument
-                              solidHeader = TRUE,  # Add solidHeader argument
+                              id = "volcanoplot", height = "500px",
                               plotOutput("volcanoPlot", 
                                          height="425px",
                                          click = "plot_click",
@@ -135,7 +130,6 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                          brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535")
                               )
                             ),
-                            
                             box(
                               # Use ShinyJS to allow deactivation of download button
                               shinyjs::useShinyjs(),
@@ -150,7 +144,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                               HTML("<br/><br/><b>Save options</b><br/><br/>"),
                               downloadButton("Download", "Download plot", icon=icon('download-alt', lib='glyphicon')),
                               downloadButton("DownloadTable", "Export table", icon=icon('share', lib='glyphicon'))
-                              )),
+                            )),
                           fluidRow (
                             box(
                               title = HTML("<b>Selected points</b>"),
@@ -163,19 +157,18 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                   
                  
                   tabItem(
-                    tabName = "GO",
+                    tabName = "GO_analysis",
                     h2("GO Term Enrichment"),
                     
                     # TabsetPanel pour séparer les paramètres et les résultats
                     tabsetPanel(
                       
                       # Onglet 1: Paramètres de l'analyse GO
-                      tabPanel(
-                        "Paramètres de l'analyse GO",
+                      tabPanel("Paramètres de l'analyse GO", tabName = "GO_analysis", 
                         fluidRow(
                           box(
                             title = HTML("<i>Analysis parameters</i>"),
-                            id = "boxPathwayparamers",
+                            id = "gotabset1",
                             width = 12,
                             status = NULL,
                             solidHeader = FALSE,
@@ -217,13 +210,12 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                       ),
                       
                       # Onglet 2: Résultats Analyse GO - séparer Up-regulated, Down-regulated et Both
-                      tabPanel(
-                        "Résultats Analyse GO",
+                      tabPanel("Résultats Analyse GO", tabName = "GO_results", 
                         fluidRow(
                           tabBox(
                             title = "Résultats Analyse GO",
                             width = 12,
-                            id = "go_results_tabs",
+                            id = "gotabset2",
                             
                             # Onglet Up-regulated
                             tabPanel("Up-regulated",
@@ -294,16 +286,14 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                         )
                       )
                     )
-                  )
-                  
-                  ,
+                  ),
                   
                   # Pathways Enrichment tab, WIP
                   tabItem(tabName = "PATH_analysis", h2("Pathway enrichment"),
                                      fluidRow (
                                        box(
                                          title = HTML("<i>Analysis parameters</i>"),
-                                         id = "boxPathwayparamers", width = 12,
+                                         id = "GO_analysis", width = 12,
                                          sliderInput("pvalPathway", "Select an adjusted p-value cutoff", min = 0, max = 1, value = 0.05, round=F),
                                          radioButtons("analysisMethodChoice", "Analysis method", choices = list("Over Representation Analysis (ORA)"="ORA", "Gene Set Enrichment Analysis (GSEA)"="GSEA"), selected = NULL,
                                                       inline = TRUE, width = NULL),
@@ -311,7 +301,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                                             inline = TRUE, width = NULL),
                                          radioButtons("dbPathwaychoice", "Database choice", choices = c("Reactome", "KEGG"), selected = NULL,
                                                       inline = TRUE, width = NULL),
-                                         actionButton("analysisPathwayButton", "Start analysis", icon=icon('transfer', lib='glyphicon')),
+                                         actionButton("analysisPathwayButton", "Start analysis", icon=icon('transfer', lib='glyphicon'))
                                        ),
                                      )),
                   tabItem(tabName = "PATH_results", 

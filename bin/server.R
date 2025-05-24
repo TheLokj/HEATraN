@@ -62,63 +62,71 @@ function(input, output, session) {
         shinyalert("Wrong format!", "Format accepted : .csv, .tsv, .xls and .xlsx", type = "error", confirmButtonCol = "#7e3535")
         return(NULL)
       }
-    }) |> bindEvent(input$tableInput, ignoreNULL=F, ignoreInit=T)
-    
-    # Observe importation in order to preprocess data
-    observe ({
-      message("Preprocessing data")
-      dataToPreprocess <- importedData()
-      # If the required columns aren't found, 
-      print(requiredNames)
-      if (FALSE %in% c(requiredNames %in% colnames(dataToPreprocess))){
-        shinyalert(html = TRUE, "Please select the variables", "Wrong column name", type = "info", confirmButtonCol = "#7e3535",
-                   text = tagList(
-                     selectInput("GeneNameCol", "Gene Name", colnames(dataToPreprocess)),
-                     selectInput("GeneIDCol", "Gene ID", colnames(dataToPreprocess)),
-                     selectInput("BaseMeanCol", "Base mean", colnames(dataToPreprocess)),
-                     selectInput("Log2FCCol", "Log2(FoldChange)", colnames(dataToPreprocess)),
-                     selectInput("pvalCol", "p-value", colnames(dataToPreprocess)),
-                     selectInput("padjCol", "Adjusted p-value", colnames(dataToPreprocess)),
-                     checkboxInput("saveColNames", "use these column names in the future"),
-                     HTML(paste("Next time, use these names to import direcly the table : <i>", paste(requiredNames, collapse=", "), "</i><br>")),
-                   ),
-                   callbackR = function(finished) { 
-                     if(finished) {
-                       if (length(unique(c(input$GeneNameCol, input$GeneIDCol, input$BaseMeanCol,input$Log2FCCol,input$pvalCol, input$padjCol)))==6){
-                           if (input$saveColNames==T) { 
-                             config$DATA$gene_name = input$GeneNameCol
-                             config$DATA$gene_id = input$GeneIDCol
-                             config$DATA$basemean = input$BaseMeanCol
-                             config$DATA$log2FC = input$Log2FCCol
-                             config$DATA$pvalue = input$pvalCol
-                             config$DATA$adjusted_pvalue = input$padjCol
-                             write.ini(config, "./conf.ini")
-                             }
-                           dataToPreprocess <- importedData()
-                           colnames(dataToPreprocess)[colnames(dataToPreprocess)==input$GeneNameCol] = "GeneName"
-                           colnames(dataToPreprocess)[colnames(dataToPreprocess)==input$GeneIDCol] = "GeneID"
-                           colnames(dataToPreprocess)[colnames(dataToPreprocess)==input$BaseMeanCol] = "baseMean"
-                           colnames(dataToPreprocess)[colnames(dataToPreprocess)==input$Log2FCCol] = "Log2FC"
-                           colnames(dataToPreprocess)[colnames(dataToPreprocess)==input$pvalCol] = "pval"
-                           colnames(dataToPreprocess)[colnames(dataToPreprocess)==input$padjCol] = "padj"
-                           dataToPreprocess$minuslog10 <- -log(dataToPreprocess$pval)
-                           preprocessedData(dataToPreprocess)
-                           selectionMode("Sliders")
-                        } else {
-                         shinyalert("Incorrect choice!", "Each column must be unique.", type = "error", confirmButtonCol = "#7e3535")
-                         }
-                       } else {return(FALSE)}})
+      # Check if the table is correctly build (with 6 columns)
+      if(dim(table)[2]>=6){
+        return(table)
       } else {
-        colnames(dataToPreprocess)[colnames(dataToPreprocess)==config$DATA$gene_name] = "GeneName"
-        colnames(dataToPreprocess)[colnames(dataToPreprocess)==config$DATA$gene_id] = "GeneID"
-        colnames(dataToPreprocess)[colnames(dataToPreprocess)==config$DATA$base_mean] = "baseMean"
-        colnames(dataToPreprocess)[colnames(dataToPreprocess)==config$DATA$log2FC] = "Log2FC"
-        colnames(dataToPreprocess)[colnames(dataToPreprocess)==config$DATA$pvalue] = "pval"
-        colnames(dataToPreprocess)[colnames(dataToPreprocess)==config$DATA$adjusted_pvalue] = "padj"
-        dataToPreprocess$minuslog10 <- -log(dataToPreprocess$pval)
-        preprocessedData(dataToPreprocess)
-        selectionMode("Sliders")}}) |> bindEvent(importedData())
-    
+        shinyalert("Incorrect table!", "The table must at least be built of six columns", type = "error", confirmButtonCol = "#7e3535")
+        return(NULL)
+      }
+    }
+  }) |> bindEvent(input$tableInput, ignoreNULL=F, ignoreInit=T)
+  
+  # Observe importation in order to preprocess data
+  observe ({
+    message("Preprocessing data")
+    dataToPreprocess <- importedData()
+    # If the required columns aren't found, 
+    print(requiredNames)
+    if (FALSE %in% c(requiredNames %in% colnames(dataToPreprocess))){
+      shinyalert(html = TRUE, "Please select the variables", "Wrong column name", type = "info", confirmButtonCol = "#7e3535",
+                 text = tagList(
+                   selectInput("GeneNameCol", "Gene Name", colnames(dataToPreprocess)),
+                   selectInput("GeneIDCol", "Gene ID", colnames(dataToPreprocess)),
+                   selectInput("BaseMeanCol", "Base mean", colnames(dataToPreprocess)),
+                   selectInput("Log2FCCol", "Log2(FoldChange)", colnames(dataToPreprocess)),
+                   selectInput("pvalCol", "p-value", colnames(dataToPreprocess)),
+                   selectInput("padjCol", "Adjusted p-value", colnames(dataToPreprocess)),
+                   checkboxInput("saveColNames", "use these column names in the future"),
+                   HTML(paste("Next time, use these names to import direcly the table : <i>", paste(requiredNames, collapse=", "), "</i><br>"))
+                 ),
+                 callbackR = function(finished) { 
+                   if(finished) {
+                     if (length(unique(c(input$GeneNameCol, input$GeneIDCol, input$BaseMeanCol,input$Log2FCCol,input$pvalCol, input$padjCol)))==6){
+                       if (input$saveColNames==T) { 
+                         config$DATA$gene_name = input$GeneNameCol
+                         config$DATA$gene_id = input$GeneIDCol
+                         config$DATA$basemean = input$BaseMeanCol
+                         config$DATA$log2FC = input$Log2FCCol
+                         config$DATA$pvalue = input$pvalCol
+                         config$DATA$adjusted_pvalue = input$padjCol
+                         write.ini(config, "./conf.ini")
+                       }
+                       dataToPreprocess <- importedData()
+                       colnames(dataToPreprocess)[colnames(dataToPreprocess)==input$GeneNameCol] = "GeneName"
+                       colnames(dataToPreprocess)[colnames(dataToPreprocess)==input$GeneIDCol] = "GeneID"
+                       colnames(dataToPreprocess)[colnames(dataToPreprocess)==input$BaseMeanCol] = "baseMean"
+                       colnames(dataToPreprocess)[colnames(dataToPreprocess)==input$Log2FCCol] = "Log2FC"
+                       colnames(dataToPreprocess)[colnames(dataToPreprocess)==input$pvalCol] = "pval"
+                       colnames(dataToPreprocess)[colnames(dataToPreprocess)==input$padjCol] = "padj"
+                       dataToPreprocess$minuslog10 <- -log(dataToPreprocess$pval)
+                       preprocessedData(dataToPreprocess)
+                       selectionMode("Sliders")
+                     } else {
+                       shinyalert("Incorrect choice!", "Each column must be unique.", type = "error", confirmButtonCol = "#7e3535")
+                     }
+                   } else {return(FALSE)}})
+    } else {
+      colnames(dataToPreprocess)[colnames(dataToPreprocess)==config$DATA$gene_name] = "GeneName"
+      colnames(dataToPreprocess)[colnames(dataToPreprocess)==config$DATA$gene_id] = "GeneID"
+      colnames(dataToPreprocess)[colnames(dataToPreprocess)==config$DATA$base_mean] = "baseMean"
+      colnames(dataToPreprocess)[colnames(dataToPreprocess)==config$DATA$log2FC] = "Log2FC"
+      colnames(dataToPreprocess)[colnames(dataToPreprocess)==config$DATA$pvalue] = "pval"
+      colnames(dataToPreprocess)[colnames(dataToPreprocess)==config$DATA$adjusted_pvalue] = "padj"
+      dataToPreprocess$minuslog10 <- -log(dataToPreprocess$pval)
+      preprocessedData(dataToPreprocess)
+      selectionMode("Sliders")}}) |> bindEvent(importedData())
+  
     # Reactive function containing the selected points
     processedData <- reactive({
       message("Processing data")
@@ -137,11 +145,10 @@ function(input, output, session) {
         }
         updateNumericInput(session, "export_GeneNumber", value=nrow(df), min=0, max=nrow(df))
         return(df)
-        } else {
+      } else {
         return(emptyTable)
       }
-    }
-  }) |> bindEvent(input$tableInput, ignoreNULL=F, ignoreInit=T)
+    })
   
     # Reactive function building the plot
     plot <- reactive({
@@ -278,25 +285,18 @@ function(input, output, session) {
           removeClass("ZoomButton", "disabled-button")
           updateActionButton(session, "ZoomButton", label = "Zoom in selection", icon=icon('zoom-in', lib='glyphicon'))
         }
-      } else if (selectionMode() == "Brush"){
+      } else {
         disable('pval')
         disable('Log2FC')
-        enable('ZoomButton')
-        removeClass("ZoomButton", "disabled-button")
-        updateActionButton(session, "ZoomButton", label = "Zoom in selection", icon=icon('zoom-in', lib='glyphicon'))
-      }
-    } else {
-      disable('pval')
-      disable('Log2FC')
-      disable('SelectAll')
-      disable('ZoomButton')
-      disable('ResetButton')
-      addClass("SelectAll", "disabled-button")
-      addClass("ZoomButton", "disabled-button")
-      addClass("ResetButton", "disabled-button")
-      addClass("Download", "disabled-button")
-      addClass("DownloadTable", "disabled-button")
-    }})
+        disable('SelectAll')
+        disable('ZoomButton')
+        disable('ResetButton')
+        addClass("SelectAll", "disabled-button")
+        addClass("ZoomButton", "disabled-button")
+        addClass("ResetButton", "disabled-button")
+        addClass("Download", "disabled-button")
+        addClass("DownloadTable", "disabled-button")
+      }})
   
   # Download button event
   output$Download <- downloadHandler(
@@ -418,7 +418,8 @@ function(input, output, session) {
     else {
     }
   })
-  # GO Analysis reactive values
+
+
   # GO Analysis reactive values
   goResults <- reactiveVal(NULL)
   
@@ -435,7 +436,7 @@ function(input, output, session) {
       gene_list <- sort(na.omit(original_gene_list), decreasing = TRUE)
       
       # Sélection des gènes selon le seuil de p-value ajustée
-      sig_genes_df <- subset(df, padj < input$go_pval)
+      sig_genes_df <- df[df$pval < input$go_pval,]
       genes <- sig_genes_df$Log2FC
       names(genes) <- sig_genes_df$GeneID
       genes <- na.omit(genes)
@@ -445,9 +446,9 @@ function(input, output, session) {
       
       # Sélection de l'ontologie GO et de l'organisme
       ontology <- input$inputGO
-      organism <- input$organism
+      go_organism <- orgs[orgs$organism==input$species, "db"]
       universe <- names(gene_list)
-      library(organism, character.only = TRUE)
+      library(go_organism, character.only = TRUE)
       
       # Méthode d’analyse : ORA ou GSEA
       if ("Gene Set Enrichment Analysis (GSEA)" %in% input$go_analysisMethodChoice) {
@@ -471,7 +472,7 @@ function(input, output, session) {
           result_up <- enrichGO(
             gene = up_genes,
             universe = universe,
-            OrgDb = organism,
+            OrgDb = go_organism,
             keyType = "ENSEMBL",
             readable = TRUE,
             ont = ontology,
@@ -484,7 +485,7 @@ function(input, output, session) {
           result_down <- enrichGO(
             gene = down_genes,
             universe = universe,
-            OrgDb = organism,
+            OrgDb = go_organism,
             keyType = "ENSEMBL",
             readable = TRUE,
             ont = ontology,
@@ -499,7 +500,7 @@ function(input, output, session) {
           result_both <- enrichGO(
             gene = both_genes,
             universe = universe,
-            OrgDb = organism,
+            OrgDb = go_organism,
             keyType = "ENSEMBL",
             readable = TRUE,
             ont = ontology,
@@ -601,10 +602,7 @@ function(input, output, session) {
     req(goResults()$both)
     DT::datatable(as.data.frame(goResults()$both), options = list(pageLength = 10))
   })
-  
-  
-  
-}
+
     # Rendering datatable
     output$table <- DT::renderDT({
       message("Rendering datatable")
