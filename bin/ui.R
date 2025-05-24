@@ -165,127 +165,97 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                       
                       # Onglet 1: Paramètres de l'analyse GO
                       tabPanel("Paramètres de l'analyse GO", tabName = "GO_analysis", 
+                               fluidRow(
+                                 box(
+                                   title = HTML("<i>Analysis parameters</i>"),
+                                   id = "gotabset1",
+                                   width = 12,
+                                   status = NULL,
+                                   solidHeader = FALSE,
+                                   collapsible = FALSE,
+                                   
+                                   # Entrée pour la p-value et le q-value
+                                   sliderInput("go_pval", "Select an adjusted p-value cutoff", 
+                                               min = 0, max = 1, value = 0.05, round = FALSE),
+                                   numericInput("qvalueCutoff", "q-value cutoff", 
+                                                min = 0, max = 1, value = 0.2, step = 0.01),
+                                   
+                                   # Sélection de la méthode d'analyse
+                                   checkboxGroupInput("go_analysisMethodChoice", "Analysis method",
+                                                      choices = c("Over Representation Analysis (ORA)", "Gene Set Enrichment Analysis (GSEA)"),
+                                                      selected = NULL,
+                                                      inline = TRUE),
+                                   
+                                   # Sélection des gènes d'intérêt pour ORA
+                                   checkboxGroupInput("go_oraChoice", "Interest for ORA method",
+                                                      choices = c("Under expressed DEG", "Over expressed DEG"),
+                                                      selected = NULL,
+                                                      inline = TRUE),
+                                   
+                                   # Sélection de l'ontologie GO
+                                   selectInput("inputGO", "Select a GO annotation",
+                                               choices = list("Biological process" = "BP",
+                                                              "Molecular function" = "MF",
+                                                              "Cellular component" = "CC"),
+                                               selected = "BP"),
+                                   
+                                   # Niveau de précision des termes GO
+                                   numericInput("goLevel", "GO level of precision (from 1 to 7)", 
+                                                min = 1, max = 7, value = 1),
+                                   
+                                   # Bouton pour démarrer l'analyse
+                                   actionButton("go_analysisButton", "Start analysis", icon = icon('text-background', lib = 'glyphicon'))
+                                 )
+                               )
+                      ),
+                      
+                      tabPanel(
+                        "Résultats Analyse GO",
                         fluidRow(
-                          box(
-                            title = HTML("<i>Analysis parameters</i>"),
-                            id = "gotabset1",
-                            width = 12,
-                            status = NULL,
-                            solidHeader = FALSE,
-                            collapsible = FALSE,
-                            
-                            # Entrée pour la p-value et le q-value
-                            sliderInput("go_pval", "Select an adjusted p-value cutoff", 
-                                        min = 0, max = 1, value = 0.05, round = FALSE),
-                            numericInput("qvalueCutoff", "q-value cutoff", 
-                                         min = 0, max = 1, value = 0.2, step = 0.01),
-                            
-                            # Sélection de la méthode d'analyse
-                            checkboxGroupInput("go_analysisMethodChoice", "Analysis method",
-                                               choices = c("Over Representation Analysis (ORA)", "Gene Set Enrichment Analysis (GSEA)"),
-                                               selected = NULL,
-                                               inline = TRUE),
-                            
-                            # Sélection des gènes d'intérêt pour ORA
-                            checkboxGroupInput("go_oraChoice", "Interest for ORA method",
-                                               choices = c("Under expressed DEG", "Over expressed DEG"),
-                                               selected = NULL,
-                                               inline = TRUE),
-                            
-                            # Sélection de l'ontologie GO
-                            selectInput("inputGO", "Select a GO annotation",
-                                        choices = list("Biological process" = "BP",
-                                                       "Molecular function" = "MF",
-                                                       "Cellular component" = "CC"),
-                                        selected = "BP"),
-                            
-                            # Niveau de précision des termes GO
-                            numericInput("goLevel", "GO level of precision (from 1 to 7)", 
-                                         min = 1, max = 7, value = 1),
-                            
-                            # Bouton pour démarrer l'analyse
-                            actionButton("go_analysisButton", "Start analysis", icon = icon('text-background', lib = 'glyphicon'))
+                          conditionalPanel(
+                            condition = "input.go_analysisMethodChoice.includes('Over Representation Analysis (ORA)')",
+                            tabBox(
+                              title = "ORA Results",
+                              width = 12,
+                              id = "ora_results_tabs",
+                              tabPanel("Up-regulated",
+                                       tabsetPanel(
+                                         tabPanel("Barplot", plotOutput("goBarplotUp")),
+                                         tabPanel("Dotplot", plotOutput("goDotplotUp")),
+                                         tabPanel("Network", plotOutput("goNetplotUp")),
+                                         tabPanel("Table", DT::dataTableOutput("goTableUp"))
+                                       )),
+                              tabPanel("Down-regulated",
+                                       tabsetPanel(
+                                         tabPanel("Barplot", plotOutput("goBarplotDown")),
+                                         tabPanel("Dotplot", plotOutput("goDotplotDown")),
+                                         tabPanel("Network", plotOutput("goNetplotDown")),
+                                         tabPanel("Table", DT::dataTableOutput("goTableDown"))
+                                       )),
+                              tabPanel("Both-regulated",
+                                       tabsetPanel(
+                                         tabPanel("Barplot", plotOutput("goBarplotBoth")),
+                                         tabPanel("Dotplot", plotOutput("goDotplotBoth")),
+                                         tabPanel("Network", plotOutput("goNetplotBoth")),
+                                         tabPanel("Table", DT::dataTableOutput("goTableBoth"))
+                                       ))
+                            )
+                          ), ###A TAB FOR GSEA RESULTS 
+                          conditionalPanel(
+                            condition = "input.go_analysisMethodChoice.includes('Gene Set Enrichment Analysis (GSEA)')",
+                            tabBox(
+                              title = "GSEA Results",
+                              width = 12,
+                              id = "gsea_results_tab",
+                              tabPanel("Dotplot", plotOutput("gseaDotplot")),
+                              tabPanel("Enrichment Plot", plotOutput("gseaEnrichmentPlot")),
+                              tabPanel("Ridgeplot", plotOutput("gseaRidgeplot")),
+                              tabPanel("Table", DT::dataTableOutput("gseaTable"))
+                            )
                           )
                         )
                       ),
                       
-                      # Onglet 2: Résultats Analyse GO - séparer Up-regulated, Down-regulated et Both
-                      tabPanel(
-                        "Résultats Analyse GO",
-                        fluidRow(
-                          tabBox(
-                            title = "Résultats Analyse GO",
-                            width = 12,
-                            id = "go_results_tabs",
-                            
-                            # Onglet Up-regulated
-                            tabPanel("Up-regulated",
-                                     fluidRow(
-                                       column(
-                                         width = 6,
-                                         h4("Up-regulated ORA results"),
-                                         tabsetPanel(
-                                           tabPanel("Barplot", plotOutput("goBarplotUp")),
-                                           tabPanel("Dotplot", plotOutput("goDotplotUp")),
-                                           tabPanel("Network", plotOutput("goNetplotUp")),
-                                           tabPanel("Table", DT::dataTableOutput("goTableUp"))
-                                         )
-                                       ),
-                                       column(
-                                         width = 6,
-                                         h4("Up-regulated GSEA results"),
-                                         plotOutput("gseaPlotUp"),  # À implémenter dans server.R
-                                         DT::dataTableOutput("gseaTableUp")
-                                       )
-                                     )
-                            ),
-                            
-                            # Onglet Down-regulated
-                            tabPanel("Down-regulated",
-                                     fluidRow(
-                                       column(
-                                         width = 6,
-                                         h4("Down-regulated ORA results"),
-                                         tabsetPanel(
-                                           tabPanel("Barplot", plotOutput("goBarplotDown")),
-                                           tabPanel("Dotplot", plotOutput("goDotplotDown")),
-                                           tabPanel("Network", plotOutput("goNetplotDown")),
-                                           tabPanel("Table", DT::dataTableOutput("goTableDown"))
-                                         )
-                                       ),
-                                       column(
-                                         width = 6,
-                                         h4("Down-regulated GSEA results"),
-                                         plotOutput("gseaPlotDown"),  # À implémenter dans server.R
-                                         DT::dataTableOutput("gseaTableDown")
-                                       )
-                                     )
-                            ),
-                            
-                            # Onglet Both-regulated
-                            tabPanel("Both-regulated",
-                                     fluidRow(
-                                       column(
-                                         width = 6,
-                                         h4("Both-regulated ORA results"),
-                                         tabsetPanel(
-                                           tabPanel("Barplot", plotOutput("goBarplotBoth")),
-                                           tabPanel("Dotplot", plotOutput("goDotplotBoth")),
-                                           tabPanel("Network", plotOutput("goNetplotBoth")),
-                                           tabPanel("Table", DT::dataTableOutput("goTableBoth"))
-                                         )
-                                       ),
-                                       column(
-                                         width = 6,
-                                         h4("Both-regulated GSEA results"),
-                                         plotOutput("gseaPlotBoth"),  # À implémenter dans server.R
-                                         DT::dataTableOutput("gseaTableBoth")
-                                       )
-                                     )
-                            )
-                          )
-                        )
-                      )
                     )
                   ),
                   
