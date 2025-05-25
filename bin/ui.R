@@ -164,7 +164,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                     tabsetPanel(
                       
                       # Onglet 1: Paramètres de l'analyse GO
-                      tabPanel("Paramètres de l'analyse GO", tabName = "GO_analysis", 
+                      tabPanel("Analysis parameters", tabName = "GO_analysis", 
                                fluidRow(
                                  box(
                                    title = HTML("<i>Analysis parameters</i>"),
@@ -210,12 +210,12 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                       ),
                       
                       tabPanel(
-                        "Résultats Analyse GO",
+                        "Results",
                         fluidRow(
                           conditionalPanel(
                             condition = "input.go_analysisMethodChoice.includes('Over Representation Analysis (ORA)')",
                             tabBox(
-                              title = "ORA Results",
+                              title = "ORA results",
                               width = 12,
                               id = "ora_results_tabs",
                               tabPanel("Up-regulated",
@@ -240,17 +240,17 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                          tabPanel("Table", DT::dataTableOutput("goTableBoth"))
                                        ))
                             )
-                          ), ###A TAB FOR GSEA RESULTS 
+                          ),
                           conditionalPanel(
                             condition = "input.go_analysisMethodChoice.includes('Gene Set Enrichment Analysis (GSEA)')",
                             tabBox(
-                              title = "GSEA Results",
+                              title = "GSEA results",
                               width = 12,
                               id = "gsea_results_tab",
-                              tabPanel("Dotplot", plotOutput("gseaDotplot")),
-                              tabPanel("Enrichment Plot", plotOutput("gseaEnrichmentPlot")),
-                              tabPanel("Ridgeplot", plotOutput("gseaRidgeplot")),
-                              tabPanel("Table", DT::dataTableOutput("gseaTable"))
+                              tabPanel("Dotplot", plotOutput("goGseaDotplot")),
+                              tabPanel("Enrichment Plot", plotOutput("goGseaEnrichmentPlot")),
+                              tabPanel("Ridgeplot", plotOutput("goGseaRidgeplot")),
+                              tabPanel("Table", DT::dataTableOutput("goGseaTable"))
                             )
                           )
                         )
@@ -259,7 +259,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                     )
                   ),
                   
-                  # Pathways Enrichment tab, WIP
+                  # Pathways Enrichment tab
                   tabItem(tabName = "PATH_analysis", h2("Pathway enrichment"),
                                      fluidRow (
                                        box(
@@ -268,8 +268,10 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                          sliderInput("pvalPathway", "Select an adjusted p-value cutoff", min = 0, max = 1, value = 0.05, round=F),
                                          radioButtons("analysisMethodChoice", "Analysis method", choices = list("Over Representation Analysis (ORA)"="ORA", "Gene Set Enrichment Analysis (GSEA)"="GSEA"), selected = NULL,
                                                       inline = TRUE, width = NULL),
-                                         checkboxGroupInput("oraChoice", "Interest for ORA method", choices = list("Under expressed DEG"="down", "Over expressed DEG"="up"), selected = NULL,
-                                                            inline = TRUE, width = NULL),
+                                         conditionalPanel(
+                                           condition = "input.analysisMethodChoice == 'ORA'",
+                                          checkboxGroupInput("oraChoice", "Interest for ORA method", choices = list("Under expressed DEG"="down", "Over expressed DEG"="up"), selected = NULL,
+                                                            inline = TRUE, width = NULL)),
                                          radioButtons("dbPathwaychoice", "Database choice", choices = c("Reactome", "KEGG"), selected = NULL,
                                                       inline = TRUE, width = NULL),
                                          actionButton("analysisPathwayButton", "Start analysis", icon=icon('transfer', lib='glyphicon'))
@@ -334,29 +336,15 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                 ),
                 
                   tabItem(tabName = "EXPORT",
-                          fluidRow(
-                            box(
-                              title = "Options d'export",
-                              width = 12,
-                              checkboxGroupInput("exportSections", "Sélectionnez les sections à exporter:",
-                                                 choices = list(
-                                                   "Whole Data Inspection" = "WDI",
-                                                   "GO Term Enrichment" = "GO",
-                                                   "Pathways Enrichment" = "PATHWAY"
-                                                 ),
-                                                 selected = c("WDI", "PATHWAY")
-                              ),
-                              conditionalPanel(
-                                condition = "input.exportSections.includes('PATHWAY')",
-                                checkboxInput("includeGSEA", "Include GSEA plots", value = FALSE),
-                                checkboxInput("includePathwayViews", "Include pathway visualization graphics", value = FALSE)
-                              ),
-                              numericInput("nGenesExport", "Nombre de gènes à inclure dans le tableau:", value = 20, min = 1, max = 100),
-                              downloadButton("exportReport", "Générer le rapport")
-                            )
-                          )
-                  )
-                )),
+                                fluidRow(
+                                  box(id="export", width = 12,
+                                    uiOutput("exportOptions"),
+                                    downloadButton("exportReport",    
+                                                   "Download report")
+                                      )
+                                  )
+                           ))
+              ),
               
               #Webpage title
               title="HEATraN"        

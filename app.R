@@ -21,7 +21,6 @@ library(fs)
 library(knitr)
 library(wordcloud)
 library(enrichplot)
-library(plotly)
 library(shinydashboardPlus) 
 
 shinyAppDir("bin/")

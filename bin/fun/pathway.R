@@ -62,59 +62,63 @@ getKEGGpathway = function(geneList, pathwayID, organism, local=T){
   } 
 }
     
-getReactomePathway = function(rankedLog2FC, pathwayIDs, pathwayDesc, organism) {
-  # Création du répertoire de sortie si nécessaire
+getReactomePathway <- function(rankedLog2FC, pathwayIDs, pathwayDesc, organism) {
   if (!dir.exists("./out/")) {
     dir.create("./out/", recursive = TRUE)
   }
   
-  # Créer un vecteur de résultats pour retourner les chemins des images générées
   pathway_images <- list()
   
-  # Pour chaque pathway
-  for (i in 1:length(pathwayIDs)) {
-    # Extraction de l'ID Reactome (format R-XXX-NNNNNN)
-    pathway_id <- pathwayIDs[i]
+  for (i in seq_along(pathwayIDs)) {
+    pathway_id   <- pathwayIDs[i]
     pathway_name <- pathwayDesc[i]
     
-    # Création d'un nom de fichier sécurisé
     safe_name <- gsub("[^a-zA-Z0-9]", "_", pathway_name)
     file_name <- paste0("./out/", safe_name, ".png")
     
-    message(paste("Processing pathway:", pathway_name, "(", pathway_id, ")"))
+    message(sprintf("Processing pathway: %s (%s)", pathway_name, pathway_id))
     
-    # Méthode 1: Utilisation de l'API pour télécharger l'image du diagramme
+    # Si le fichier existe déjà, on le réutilise et on passe au suivant
+    if (file.exists(file_name)) {
+      message(sprintf("File already exists, skipping download: %s", file_name))
+      pathway_images[[i]] <- file_name
+      next
+    }
+    
+    # Tentative de téléchargement via l'API Reactome
     tryCatch({
-      # URL de l'API Reactome pour les diagrammes
-      api_url <- paste0("https://reactome.org/ContentService/exporter/diagram/", 
-                        pathway_id, ".png?quality=7")
+      api_url <- paste0(
+        "https://reactome.org/ContentService/exporter/diagram/",
+        pathway_id, ".png?quality=7"
+      )
       
-      # Téléchargement de l'image
       download.file(api_url, file_name, mode = "wb", quiet = TRUE)
-      message(paste("Saved pathway image to:", file_name))
-      
-      # Ajouter le chemin de l'image au résultat
+      message(sprintf("Saved pathway image to: %s", file_name))
       pathway_images[[i]] <- file_name
       
     }, error = function(e) {
-      # En cas d'échec, essayer la méthode 2 (embarquée)
-      message(paste("Failed to download from API, trying embedded method for", pathway_name))
+      message(sprintf(
+        "Failed to download from API, trying embedded method for %s", 
+        pathway_name
+      ))
       
       tryCatch({
-        # Utiliser viewPathway comme méthode de secours
-        p <- viewPathway(pathway_id,
-                         organism = organism,
-                         readable = TRUE,
-                         foldChange = rankedLog2FC)
+        p <- viewPathway(
+          pathway_id,
+          organism = organism,
+          readable = TRUE,
+          foldChange = rankedLog2FC
+        )
         
-        # Sauvegarder le graphique
         ggplot2::ggsave(file_name, p, width = 10, height = 8)
-        message(paste("Saved pathway image using viewPathway to:", file_name))
-        
-        # Ajouter le chemin de l'image au résultat
+        message(sprintf("Saved pathway image using viewPathway to: %s", file_name))
         pathway_images[[i]] <- file_name
+        
       }, error = function(e2) {
-        message(paste("Failed to generate pathway image for", pathway_name, ":", e2$message))
+        message(sprintf(
+          "Failed to generate pathway image for %s: %s",
+          pathway_name, e2$message
+        ))
         pathway_images[[i]] <- NULL
       })
     })
@@ -122,6 +126,7 @@ getReactomePathway = function(rankedLog2FC, pathwayIDs, pathwayDesc, organism) {
   
   return(pathway_images)
 }
+
 
 preprocessPathway = function(data, organism, DB){
   entrezIds = bitr(data$GeneID, fromType = "ENSEMBL", toType = "ENTREZID", OrgDb = orgs[orgs$organism==organism, "db"], drop=T)

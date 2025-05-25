@@ -13,12 +13,16 @@ source("./bin/fun/pathway.R")
 config <- read.ini("./conf.ini")
 
 emptyTable <- data.frame(Gene=NA, Log2FC=NA, p_value=NA)
+emptyTableGo <- data.frame(GO=NA, Description=NA, p_value=NA, q_value=NA)
 emptyTable2 <- data.frame(Pathway=NA, p_value=NA, q_value=NA)
 brushInfo <- reactiveVal(NULL)
-enrichment <- reactiveVal(NULL)
+pathwayEnrichment <- reactiveVal(NULL)
+goOraResults <- reactiveVal(NULL)
+goGseaResults <- reactiveVal(NULL)
 selectionMode <- reactiveVal("None")
 preprocessedData <- reactiveVal(emptyTable)
 requiredNames <- c(config$DATA$gene_name, config$DATA$gene_id, config$DATA$basemean, config$DATA$log2FC,  config$DATA$pvalue, config$DATA$adjusted_pvalue)
+
 emptyPlot <- ggplot() + 
   geom_richtext(aes(x = 0.5, y = 0.5, 
                     label = "<b style='font-family:Mulish,sans-serif;font-size:20pt;'>Data required for visual representation</b>"), 
@@ -26,7 +30,7 @@ emptyPlot <- ggplot() +
   theme_void() +
   theme(panel.background = element_rect(fill = "white", color = NA))
 
-emptyGSEAPlot <- ggplot() + 
+emptyGseaPlot <- ggplot() + 
   geom_richtext(aes(x = 0.5, y = 0.5, 
                     label = "<b style='font-family:Mulish,sans-serif;font-size:20pt;'>Please select at least one enriched pathways</b>"), 
                 size = 6, color = "red3", fill = NA, label.color = NA) +
@@ -38,7 +42,7 @@ function(input, output, session) {
   # -----------------------------------------
   # Data processing
   # -----------------------------------------
-  
+
   # Reactive function controlling the imported data
   importedData <- reactive ({
     message("Importing data")
@@ -72,14 +76,11 @@ function(input, output, session) {
     }
   }) |> bindEvent(input$tableInput, ignoreNULL=F, ignoreInit=T)
   
-  # Observe importation in order to preprocess data
   observe ({
     message("Preprocessing data")
     dataToPreprocess <- importedData()
-    # If the required columns aren't found, 
-    print(requiredNames)
-    if (FALSE %in% c(requiredNames %in% colnames(dataToPreprocess))){
-      shinyalert(html = TRUE, "Please select the variables", "Wrong column name", type = "info", confirmButtonCol = "#7e3535",
+    if (F %in% c(requiredNames %in% colnames(dataToPreprocess))){
+      shinyalert(html = T, "Please select the variables", "Wrong column name", type = "info", confirmButtonCol = "#7e3535",
                  text = tagList(
                    selectInput("GeneNameCol", "Gene Name", colnames(dataToPreprocess)),
                    selectInput("GeneIDCol", "Gene ID", colnames(dataToPreprocess)),
@@ -115,7 +116,7 @@ function(input, output, session) {
                      } else {
                        shinyalert("Incorrect choice!", "Each column must be unique.", type = "error", confirmButtonCol = "#7e3535")
                      }
-                   } else {return(FALSE)}})
+                   } else {return(F)}})
     } else {
       colnames(dataToPreprocess)[colnames(dataToPreprocess)==config$DATA$gene_name] = "GeneName"
       colnames(dataToPreprocess)[colnames(dataToPreprocess)==config$DATA$gene_id] = "GeneID"
@@ -130,7 +131,7 @@ function(input, output, session) {
     # Reactive function containing the selected points
     processedData <- reactive({
       message("Processing data")
-      if (!isTRUE(all.equal(emptyTable, preprocessedData()))){
+      if (!isT(all.equal(emptyTable, preprocessedData()))){
         df <- preprocessedData()
         updateSliderInput(session,'Log2FC',max=ceiling(max(abs(df$Log2FC))))
         # Adapt the plot limit when user zoom in it
@@ -139,9 +140,9 @@ function(input, output, session) {
         }
         # Update the selected points according to the selection mode
         if (selectionMode() == "Brush") {
-          df$selected <- ifelse(df$GeneID%in%brushedPoints(df, brushInfo()())$GeneID, "TRUE", "FALSE")
+          df$selected <- ifelse(df$GeneID%in%brushedPoints(df, brushInfo()())$GeneID, "T", "F")
         } else if (selectionMode() == "Sliders"){
-          df$selected <- ifelse((df$Log2FC>input$Log2FC&df$padj<input$pval)|(df$Log2FC<(-input$Log2FC)&df$padj<input$pval), "TRUE", "FALSE")
+          df$selected <- ifelse((df$Log2FC>input$Log2FC&df$padj<input$pval)|(df$Log2FC<(-input$Log2FC)&df$padj<input$pval), "T", "F")
         }
         updateNumericInput(session, "export_GeneNumber", value=nrow(df), min=0, max=nrow(df))
         return(df)
@@ -155,46 +156,46 @@ function(input, output, session) {
       message("Loading plot")
         plot = ggplot(processedData(), aes(x=Log2FC, y=minuslog10, col=selected)) +
           geom_point() +
-          scale_color_manual(values=c("FALSE" = "#384246", "TRUE" = "#E69F00")) +
+          scale_color_manual(values=c("F" = "#384246", "T" = "#E69F00")) +
           theme(legend.position = "none") +
           xlab("log2(FoldChange)") +
           ylab("-log10(p-value ajusted)") +
           theme(text = element_text(size = 14))    
         return(plot)})
     
-    dotPlot <- reactive({
-      if (!is.null(enrichment())) {
-        data = enrichment()$enrichment
+    pathwayDotPlot <- reactive({
+      if (!is.null(pathwayEnrichment())) {
+        data = pathwayEnrichment()$enrichment
         result_df <- data@result
         result_df[result_df$p.adjust <= input$qval, ]
         data@result <- result_df
-        plot = dotplot(data, showCategory=30) + ggtitle("DotPlot" )  
+        plot = dotplot(data, showCategory=30) + ggtitle("Dotplot" )  
         return(plot)
       } else {
         return(emptyPlot)
       }}
       )
     
-    treePlot <- reactive({
-      if (!is.null(enrichment())) {
-        data = enrichment()$enrichment
+    pathwayTreePlot <- reactive({
+      if (!is.null(pathwayEnrichment())) {
+        data = pathwayEnrichment()$enrichment
         dataR <- pairwise_termsim(setReadable(data, orgs[orgs$organism==input$species, "db"], 'ENTREZID'))
-        if (enrichment()$parameters$analysis=="GSEA") {
+        if (pathwayEnrichment()$parameters$analysis=="GSEA") {
           plot = treeplot(dataR, foldChange=data@geneList)
-        } else if (enrichment()$parameters$analysis=="ORA") {
+        } else if (pathwayEnrichment()$parameters$analysis=="ORA") {
           plot = treeplot(dataR)
         }  
         return(plot)
       } else {
         return(emptyPlot)
       }
-      })
+    })
     
-    cnetPlot <- reactive({
-      if (!is.null(enrichment())) {
-        data = enrichment()$enrichment
+    pathwayCnetPlot <- reactive({
+      if (!is.null(pathwayEnrichment())) {
+        data = pathwayEnrichment()$enrichment
         dataR = setReadable(data, orgs[orgs$organism==input$species, "db"], 'ENTREZID')
-        if (enrichment()$parameters$analysis=="GSEA") {
+        if (pathwayEnrichment()$parameters$analysis=="GSEA") {
           plot = cnetplot(dataR, foldChange=data@geneList)
         } else {
           plot = cnetplot(dataR)
@@ -203,51 +204,36 @@ function(input, output, session) {
       } else {
         return(emptyPlot)
       }
-      })
+    })
     
-    #### Change here to select the GSEA Pathway according to ID 
-    gseaPlot <- reactive({
+    pathwayGseaPlot <- reactive({
       if ((!is.null(input$pathwayGSEA)) & (length(input$pathwayGSEA)>0)) {
-        data = enrichment()$enrichment
+        data = pathwayEnrichment()$enrichment
         plot = gseaplot2(data, as.numeric(input$pathwayGSEA)) 
         return(plot)
       } else {
-        return(emptyGSEAPlot)
+        return(emptyGseaPlot)
       }
-      })
+     })
       
     output$conditional_gsea_row <- renderUI({
-      if (!is.null(enrichment())) {
-        if (enrichment()$parameters$analysis=="GSEA") {
-          fluidRow(
-            box(
-              title = HTML("<b>GSEA plot</b>"),
-              id = "gseaplot", width = 12,
-              
-              selectInput("pathwayGSEA", "Select one or more pathways:", choices = c("None"), selected = "None", multiple=TRUE),
-              plotOutput("gseaplot",
-                         height = "425px",
-                         click = "plot_click",
-                         dblclick = "plot_dblclick",
-                         hover = "plot_hover",
-                         brush = brushOpts(id = "plot_brush", delay = 3000, delayType = "debounce", fill="#7e3535", stroke="#7e3535"))
-            )
-          )
+      if (!is.null(pathwayEnrichment())) {
+        if (pathwayEnrichment()$parameters$analysis=="GSEA") {
+          
         }
     } else {}
       })
     
     observeEvent(input$pathwayGSEA, {
-      if (!is.null(enrichment()) & (input$pathwayGSEA[1]=="None")) {
-        data = enrichment()$enrichment
-        if (enrichment()$parameters$DB=="KEGG"){
+      if (!is.null(pathwayEnrichment()) & (input$pathwayGSEA[1]=="None")) {
+        data = pathwayEnrichment()$enrichment
+        if (pathwayEnrichment()$parameters$DB=="KEGG"){
           updateSelectInput(session ,"pathwayGSEA", choices = setNames(1:length(data$ID), data$ID))
         }
-        else if (enrichment()$parameters$DB=="Reactome"){
+        else if (pathwayEnrichment()$parameters$DB=="Reactome"){
           updateSelectInput(session ,"pathwayGSEA", choices = setNames(1:length(data$Description), data$Description))
         }}
     })
-    
     
     # -----------------------------------------
     # User event
@@ -258,6 +244,7 @@ function(input, output, session) {
     # Disable also other buttons with shinyJS to standardize rendering
     
     #--- Whole Data Inspection ---#
+    
     observeEvent(selectionMode(), {
       message(paste("Selection mode:", selectionMode()))
       if (selectionMode() != "None") {
@@ -369,6 +356,98 @@ function(input, output, session) {
     }
   }) |> bindEvent(input$ZoomButton, ignoreNULL=F)
 
+ #--- GO Enrichment ---#
+  
+  observeEvent(input$go_analysisButton, {
+    req(preprocessedData())
+    
+    withProgress(message = 'Running GO analysis...', {
+      df <- preprocessedData()
+      
+      # List of genes for the universe
+      original_gene_list <- df$Log2FC
+      names(original_gene_list) <- df$GeneID
+      gene_list <- sort(na.omit(original_gene_list), decreasing = T)
+      
+      # Gene selection by adjusted p-value threshold
+      sig_genes_df <- df[df$padj < input$go_pval,]
+      genes <- sig_genes_df$Log2FC
+      names(genes) <- sig_genes_df$GeneID
+      genes <- na.omit(genes)
+      
+      up_genes <- names(genes)[genes > 0]
+      down_genes <- names(genes)[genes < 0]
+      
+      # Selecting the GO ontology and organism
+      ontology <- input$inputGO
+      go_organism <- orgs[orgs$organism==input$species, "db"]
+      universe <- names(gene_list)
+      library(go_organism, character.only = T)
+      
+      if ("Gene Set Enrichment Analysis (GSEA)" %in% input$go_analysisMethodChoice) {
+        gene_list <- df$Log2FC
+        names(gene_list) <- df$GeneID
+        gene_list <- sort(na.omit(gene_list), decreasing = T)
+        gsea_result <- gseGO(geneList = gene_list, OrgDb = get(go_organism), ont = input$inputGO, keyType = "ENSEMBL", pvalueCutoff = input$go_pval, verbose = F)
+        goGseaResults(gsea_result) 
+      } 
+      
+      if ("Over Representation Analysis (ORA)" %in% input$go_analysisMethodChoice) {
+        analyze_up <- "Over expressed DEG" %in% input$go_oraChoice
+        analyze_down <- "Under expressed DEG" %in% input$go_oraChoice
+        
+        if (!analyze_up && !analyze_down) {
+          shinyalert("Error", "Select at least one type of gene expression (Over or Under expressed DEG).", type = "error")
+          return(NULL)
+        }
+        
+        if (analyze_up && length(up_genes) > 0) {
+          result_up <- enrichGO(
+            gene = up_genes,
+            universe = universe,
+            OrgDb = go_organism,
+            keyType = "ENSEMBL",
+            readable = T,
+            ont = ontology,
+            pvalueCutoff = input$go_pval,
+            qvalueCutoff = input$qvalueCutoff
+          )
+        } else { result_up <- NULL }
+        
+        if (analyze_down && length(down_genes) > 0) {
+          result_down <- enrichGO(
+            gene = down_genes,
+            universe = universe,
+            OrgDb = go_organism,
+            keyType = "ENSEMBL",
+            readable = T,
+            ont = ontology,
+            pvalueCutoff = input$go_pval,
+            qvalueCutoff = input$qvalueCutoff 
+          )
+        } else { result_down <- NULL }
+        
+        both_genes <- union(up_genes, down_genes)  
+        if (length(both_genes) > 0) {
+          result_both <- enrichGO(
+            gene = both_genes,
+            universe = universe,
+            OrgDb = go_organism,
+            keyType = "ENSEMBL",
+            readable = T,
+            ont = ontology,
+            pvalueCutoff = input$go_pval,
+            qvalueCutoff = input$qvalueCutoff 
+          )
+        } else { result_both <- NULL }
+        
+        # Storing results in goOraResults
+        goOraResults(list(up = result_up, down = result_down, both = result_both))
+        
+      }
+    })
+    })
+  
     #--- Pathway Enrichment ---#
     
     observe({
@@ -383,289 +462,204 @@ function(input, output, session) {
         {
           message("Starting Pathway Enrichment...")
           df = as.data.frame(preprocessedData())
-          enrichment(pathway(df, organism = input$species, DB=input$dbPathwaychoice, analysis=input$analysisMethodChoice, oraInterest=input$oraChoice, pval=input$pvalPathway))},
+          pathwayEnrichment(pathway(df, organism = input$species, DB=input$dbPathwaychoice, analysis=input$analysisMethodChoice, oraInterest=input$oraChoice, pval=input$pvalPathway))},
         )}
     }) |> bindEvent(input$analysisPathwayButton)
+    
+    observeEvent(pathwayEnrichment(), {
+      data = pathwayEnrichment()$enrichment
+      if (pathwayEnrichment()$parameters$DB=="KEGG"){
+        print(data)
+        updateSelectInput(session ,"pathway", choices = data$ID)
+        if (pathwayEnrichment()$parameters$analysis == "GSEA") {
+          updateSelectInput(session ,"pathwayGSEA", choices = setNames(1:length(data$ID), data$ID))
+        }
+      }
+      else if (pathwayEnrichment()$parameters$DB=="Reactome"){
+        updateSelectInput(session ,"pathway", choices = data$Description)
+        if (pathwayEnrichment()$parameters$analysis == "GSEA") {
+          updateSelectInput(session ,"pathwayGSEA", choices = setNames(1:length(data$Description), data$Description))
+        }
+      }
+    }) 
   
-    # -----------------------------------------
-    # UI output 
-    # -----------------------------------------
+  # -----------------------------------------
+  # UI output 
+  # -----------------------------------------
 
-    # Rendering "Current selection" section 
-    output$InfoSelect <- renderUI({
-      if (is.null(preprocessedData) || is.na(preprocessedData()[1,1])){
-        HTML(paste("<b style='color:	#FF0000'>Data required for selection</b><br/><br/>", sep=""))
+  #--- Whole Data Inspection ---#
+    
+  output$InfoSelect <- renderUI({
+    if (is.null(preprocessedData) || is.na(preprocessedData()[1,1])){
+      HTML(paste("<b style='color:	#FF0000'>Data required for selection</b><br/><br/>", sep=""))
+    }
+    else {
+      if (is.null(input$plot_brush)){
+        HTML(paste("<b>Current selection</b><br/><i>p-value</i>: [0 ; ", input$pval,"]", "    <br/>    ", "<i>log2(FoldChange)</i>: ", "[-", input$Log2FC, " ; ", input$Log2FC,"]<br/><br/>", sep=""))
       }
       else {
-        HTML(paste("<b>Current selection</b><br/><i>p-value</i>: [", format(exp(-input$plot_brush$ymax), scientific=TRUE, digits=3), " ; " , format(exp(-input$plot_brush$ymin), scientific=TRUE, digits=3),"]", "     <br/>    ", "<i>log2(FoldChange)</i>: ", "[", round(input$plot_brush$xmin, 3), " ; ", round(input$plot_brush$xmax, 3),"]<br/><br/>", sep=""))
+        HTML(paste("<b>Current selection</b><br/><i>p-value</i>: [", format(exp(-input$plot_brush$ymax), scientific=T, digits=3), " ; " , format(exp(-input$plot_brush$ymin), scientific=T, digits=3),"]", "     <br/>    ", "<i>log2(FoldChange)</i>: ", "[", round(input$plot_brush$xmin, 3), " ; ", round(input$plot_brush$xmax, 3),"]<br/><br/>", sep=""))
       }}
-  )
+  })
   
-  # Rendering datatable
   output$table <- DT::renderDT({
     message("Rendering datatable")
     if (!is.na(preprocessedData()[1,1])){
-      processedData()[processedData()$selected==TRUE,-c("selected","minuslog10")]}
+      processedData()[processedData()$selected==T,-c("selected","minuslog10")]}
     else {
       processedData()
     }})
   
-  # Rendering volcano plot
   output$volcanoPlot <- renderPlot ({
     message("Rendering volcano plot")
     if (!is.na(preprocessedData()[1,1])){
       plot()}
     else {
+      return(emptyPlot)
     }
   })
   
-  # GO Analysis reactive values
-  goResults <- reactiveVal(NULL)
-  # Reactive value for GSEA results
-  gseaResults <- reactiveVal(NULL)
-  
-  observeEvent(input$go_analysisButton, {
-    req(preprocessedData())
-    
-    withProgress(message = 'Running GO analysis...', {
-      
-      df <- preprocessedData()
-      
-      # Liste des gènes pour l'univers
-      original_gene_list <- df$Log2FC
-      names(original_gene_list) <- df$GeneID
-      gene_list <- sort(na.omit(original_gene_list), decreasing = TRUE)
-      
-      # Sélection des gènes selon le seuil de p-value ajustée
-      sig_genes_df <- df[df$pval < input$go_pval,]
-      genes <- sig_genes_df$Log2FC
-      names(genes) <- sig_genes_df$GeneID
-      genes <- na.omit(genes)
-      
-      up_genes <- names(genes)[genes > 0]
-      down_genes <- names(genes)[genes < 0]
-      
-      # Sélection de l'ontologie GO et de l'organisme
-      ontology <- input$inputGO
-      go_organism <- orgs[orgs$organism==input$species, "db"]
-      universe <- names(gene_list)
-      library(go_organism, character.only = TRUE)
-      
-      # Méthode d’analyse : ORA ou GSEA
-      if ("Gene Set Enrichment Analysis (GSEA)" %in% input$go_analysisMethodChoice) {
-        df <- preprocessedData()
-        gene_list <- df$Log2FC
-        names(gene_list) <- df$GeneID
-        gene_list <- sort(na.omit(gene_list), decreasing = TRUE)
-        
-        #analyse GSEA
-        gsea_result <- gseGO(
-          geneList      = gene_list,
-          OrgDb         = get(go_organism),  
-          ont           = input$inputGO,        
-          keyType       = "ENSEMBL",
-          pvalueCutoff  = input$go_pval,
-          verbose       = FALSE
-        )
-      
-        gseaResults(gsea_result) 
-       
-      } else if ("Over Representation Analysis (ORA)" %in% input$go_analysisMethodChoice) {
-        # ORA selon les sélections
-        analyze_up <- "Over expressed DEG" %in% input$go_oraChoice
-        analyze_down <- "Under expressed DEG" %in% input$go_oraChoice
-        
-        if (!analyze_up && !analyze_down) {
-          shinyalert("Erreur", "Veuillez sélectionner au moins un type de gène (Over ou Under expressed DEG).", type = "error")
-          return(NULL)
-        }
-        
-        result_up <- NULL
-        result_down <- NULL
-        result_both <- NULL  # Ajout des résultats pour Both-regulated
-        
-        if (analyze_up && length(up_genes) > 0) {
-          result_up <- enrichGO(
-            gene = up_genes,
-            universe = universe,
-            OrgDb = go_organism,
-            keyType = "ENSEMBL",
-            readable = TRUE,
-            ont = ontology,
-            pvalueCutoff = input$go_pval,
-            qvalueCutoff = input$qvalueCutoff
-          )
-        }
-        
-        if (analyze_down && length(down_genes) > 0) {
-          result_down <- enrichGO(
-            gene = down_genes,
-            universe = universe,
-            OrgDb = go_organism,
-            keyType = "ENSEMBL",
-            readable = TRUE,
-            ont = ontology,
-            pvalueCutoff = input$go_pval,
-            qvalueCutoff = input$qvalueCutoff 
-          )
-        }
-        
-        # Pour les résultats Both-regulated, tu pourrais combiner les gènes up et down (généralement ce n'est pas standard en GO, mais ça peut être utile selon ton cas d'usage)
-        both_genes <- union(up_genes, down_genes)  # Union des gènes up et down
-        if (length(both_genes) > 0) {
-          result_both <- enrichGO(
-            gene = both_genes,
-            universe = universe,
-            OrgDb = go_organism,
-            keyType = "ENSEMBL",
-            readable = TRUE,
-            ont = ontology,
-            pvalueCutoff = input$go_pval,
-            qvalueCutoff = input$qvalueCutoff 
-          )
-        }
-        
-        # Storer les résultats dans goResults
-        goResults(list(up = result_up, down = result_down, both = result_both))
-      }
-    })
-  })
-  
-  # === PLOTS ORA ===
-  # Barplots
-  # output$goBarplotUp <- renderPlot({
-  #   req(goResults()$up)
-  #   barplot(goResults()$up,
-  #           drop = TRUE,
-  #           showCategory = input$topCategoriesUp,
-  #           title = "GO Biological Pathways (Up-regulated)",
-  #           font.size = 8)
-  # })
+  #--- GO Enrichment ---#
   
   output$goBarplotUp <- renderPlot({
-    req(goResults()$up)
-    barplot(goResults()$up)
+    if (!is.null(goOraResults()$up)) {
+      barplot(goOraResults()$up)
+    } else {
+      emptyPlot
+    }
   })
   
   output$goBarplotDown <- renderPlot({
-    req(goResults()$down)
-    barplot(goResults()$down,
-            drop = TRUE,
-            showCategory = input$topCategoriesDown,
-            title = "GO Biological Pathways (Down-regulated)",
-            font.size = 8)
+    if (!is.null(goOraResults()$down)) {
+    #barplot(goOraResults()$down, drop = T, showCategory = input$topCategoriesDown, itle = "GO Biological Pathways (Down-regulated)", font.size = 8)
+    barplot(goOraResults()$down)
+    } else {
+        emptyPlot
+    }
   })
   
   output$goBarplotBoth <- renderPlot({
-    req(goResults()$both)
-    barplot(goResults()$both,
-            drop = TRUE,
-            showCategory = input$topCategoriesUp,  # tu peux ajuster si nécessaire
-            title = "GO Biological Pathways (Both-regulated)",
-            font.size = 8)
+    if (!is.null(goOraResults()$both)) {
+      barplot(goOraResults()$both)
+      #barplot(goOraResults()$both, drop = T, showCategory = input$topCategoriesUp, title = "GO Biological Pathways (Both-regulated)", font.size = 8)
+    } else {
+      emptyPlot
+    }
   })
   
-  # Dotplots
   output$goDotplotUp <- renderPlot({
-    req(goResults()$up)
-    dotplot(goResults()$up)
+    if (!is.null(goOraResults()$up)) {
+      dotplot(goOraResults()$up)
+    } else {
+      emptyPlot
+    }
   })
- 
   
   output$goDotplotDown <- renderPlot({
-    req(goResults()$down)
-    dotplot(goResults()$down)
+    if (!is.null(goOraResults()$down)) {
+      dotplot(goOraResults()$down)
+    } else {
+      emptyPlot
+    }
   })
   
   output$goDotplotBoth <- renderPlot({
-    req(goResults()$both)
-    dotplot(goResults()$both)
+    if (!is.null(goOraResults()$both)) {
+      dotplot(goOraResults()$both)
+    } else {
+      emptyPlot
+    }
   })
   
   # Network plots
   output$goNetplotUp <- renderPlot({
-    req(goResults()$up)
-    go_enrich <- pairwise_termsim(goResults()$up)
-    # emapplot(go_enrich, layout = "kk", showCategory = 15)
-    emapplot(go_enrich, layout.params = list(layout = "kk"), showCategory = 15)
+    if (!is.null(goOraResults()$up)) {
+      go_enrich <- pairwise_termsim(goOraResults()$up)
+      emapplot(go_enrich, layout = "kk", showCategory = 15)
+      #emapplot(go_enrich, layout.params = list(layout = "kk"), showCategory = 15)
+    } else {
+      emptyPlot
+    }
     
   })
   
   output$goNetplotDown <- renderPlot({
-    req(goResults()$down)
-    go_enrich <- pairwise_termsim(goResults()$down)
-    emapplot(go_enrich, layout = "kk", showCategory = 15)
+    if (!is.null(goOraResults()$down)) {
+      go_enrich <- pairwise_termsim(goOraResults()$down)
+      emapplot(go_enrich, layout = "kk", showCategory = 15)
+    } else {
+      emptyPlot
+    }
   })
   
   output$goNetplotBoth <- renderPlot({
-    req(goResults()$both)
-    go_enrich <- pairwise_termsim(goResults()$both)
+    if (!is.null(goOraResults()$both)) {
+    go_enrich <- pairwise_termsim(goOraResults()$both)
     emapplot(go_enrich, layout = "kk", showCategory = 15)
+    } else {
+      emptyPlot
+    }
   })
   
   # === TABLES ORA ===
   output$goTableUp <- DT::renderDT({
-    req(goResults()$up)
-    DT::datatable(as.data.frame(goResults()$up), options = list(pageLength = 10))
+    if (!(is.null(goOraResults()$up))) {
+      DT::datatable(as.data.frame(goOraResults()$up), options = list(pageLength = 10)) 
+    } else { emptyTableGo }
   })
   
   output$goTableDown <- DT::renderDT({
-    req(goResults()$down)
-    DT::datatable(as.data.frame(goResults()$down), options = list(pageLength = 10))
+    if (!(is.null(goOraResults()$down))) {
+      DT::datatable(as.data.frame(goOraResults()$down), options = list(pageLength = 10)) 
+    } else { emptyTableGo }
   })
   
   output$goTableBoth <- DT::renderDT({
-    req(goResults()$both)
-    DT::datatable(as.data.frame(goResults()$both), options = list(pageLength = 10))
+    if (!(is.null(goOraResults()$both))) {
+      DT::datatable(as.data.frame(goOraResults()$both), options = list(pageLength = 10)) 
+    } else { emptyTableGo }
   })
-
-    # Rendering datatable
-    output$table <- DT::renderDT({
-      message("Rendering datatable")
-      if (!is.na(preprocessedData()[1,1])){
-        processedData()[processedData()$selected==TRUE,-c("selected","minuslog10")]}
-      else {
-        processedData()
-      }})
-    
-    # Rendering volcano plot
-    output$volcanoPlot <- renderPlot ({
-      message("Rendering volcano plot")
-      if (!is.na(preprocessedData()[1,1])){
-        plot()}
-      else {
-        return(emptyPlot)
-      }
+  
+  output$goGseaDotplot <- renderPlot({
+    if (!(is.null(goGseaResults()))) {
+      dotplot(goGseaResults())
+    } else { emptyPlot }
+  })
+  
+  output$goGseaEnrichmentPlot <- renderPlot({
+    if (!(is.null(goGseaResults()))) {
+      top_term <- goGseaResults()@result$ID[1]
+      gseaplot(goGseaResults(), by = "all", geneSetID = top_term)
+      #    pathwayGseaPlot2(goGseaResults(), geneSetID = top_term)
+      } else { emptyPlot }
     })
-    
-    ### Pathway
-    observeEvent(enrichment(), {
-      data = enrichment()$enrichment
-      if (enrichment()$parameters$DB=="KEGG"){
-        print(data)
-        updateSelectInput(session ,"pathway", choices = data$ID)
-        if (enrichment()$parameters$analysis == "GSEA") {
-        updateSelectInput(session ,"pathwayGSEA", choices = setNames(1:length(data$ID), data$ID))
-          }
-      }
-      else if (enrichment()$parameters$DB=="Reactome"){
-        updateSelectInput(session ,"pathway", choices = data$Description)
-        if (enrichment()$parameters$analysis == "GSEA") {
-        updateSelectInput(session ,"pathwayGSEA", choices = setNames(1:length(data$Description), data$Description))
-        }
-      }
-    }) 
-    
+  
+  output$goGseaRidgeplot <- renderPlot({
+    if (!(is.null(goGseaResults()))) {
+      ridgeplot(goGseaResults(), showCategory = 13)
+    } else { emptyPlot }
+  })
+  
+  output$goGseaTable <- DT::renderDT({
+    if (!(is.null(goGseaResults()))) {
+      DT::datatable(as.data.frame(goGseaResults()), options = list(pageLength = 10))
+    } else {
+      emptyTableGo
+    }
+  })
+  
+  #--- Pathway Enrichment ---#
+
     output$analysisDesc <- renderUI({
-      if (!is.null(enrichment())) {
+      if (!is.null(pathwayEnrichment())) {
         HTML(paste(
           "<div style='font-family: Arial, sans-serif; line-height: 1.6;'>",
-          "<p><strong>Organism:</strong><em>", enrichment()$parameters$organism, "</em></p>",
-          "<p><strong>Analysis:</strong> ", enrichment()$parameters$analysis, "</p>",
-          "<p><strong>Requested database:</strong> ", enrichment()$parameters$DB, "</p>",
-          "<p><strong>Log2FC threshold:</strong> ", enrichment()$parameters$threshold, "</p>",
-          "<p><strong>Ajusted p-value threshold:</strong> ", enrichment()$parameters$pval, "</p>",
-          "<p><strong>Number of enriched pathways:</strong> ", length(unique(enrichment()$enrichment$ID)), "</p>",
+          "<p><strong>Organism:</strong><em>", pathwayEnrichment()$parameters$organism, "</em></p>",
+          "<p><strong>Analysis:</strong> ", pathwayEnrichment()$parameters$analysis, "</p>",
+          "<p><strong>Requested database:</strong> ", pathwayEnrichment()$parameters$DB, "</p>",
+          "<p><strong>Log2FC threshold:</strong> ", pathwayEnrichment()$parameters$threshold, "</p>",
+          "<p><strong>Ajusted p-value threshold:</strong> ", pathwayEnrichment()$parameters$pval, "</p>",
+          "<p><strong>Number of enriched pathways:</strong> ", length(unique(pathwayEnrichment()$enrichment$ID)), "</p>",
           "</div>"
         ))
       } else {
@@ -675,18 +669,18 @@ function(input, output, session) {
     
     output$pathwaytable <- DT::renderDT ({
       message("Rendering Pathway DataTable")
-      if (!is.null(enrichment())){
-        df = as.data.frame(enrichment()$enrichment)
+      if (!is.null(pathwayEnrichment())){
+        df = as.data.frame(pathwayEnrichment()$enrichment)
         df = df[df$p.adjust <= input$qval,] 
         for (i in 1:length(df$ID)) {
-          if (enrichment()$parameters$DB=="KEGG"){
+          if (pathwayEnrichment()$parameters$DB=="KEGG"){
             df$ID[i] = paste('<a href="https://www.genome.jp/pathway/', df$ID[i], '" target="_blank">', df$ID[i], '</a>', sep="")
-          } else if (enrichment()$parameters$DB=="Reactome"){
+          } else if (pathwayEnrichment()$parameters$DB=="Reactome"){
             df$ID[i] = paste('<a href="https://reactome.org/PathwayBrowser/#/', df$ID[i], '" target="_blank">', df$ID[i], '</a>', sep="")
           }
         }
         if (nrow(df) != 0) {
-          datatable(df, escape = FALSE)
+          datatable(df, escape = F)
         }
         else {
           emptyTable2}
@@ -698,39 +692,39 @@ function(input, output, session) {
     
     output$pathwayplotout <- renderPlot ({
       message("Rendering Pathway Dot plot")
-      if (!is.null(dotPlot())){
-        dotPlot()}
+      if (!is.null(pathwayDotPlot())){
+        pathwayDotPlot()}
       else {
       }
     })
       
     output$pathwayplotout2 <- renderPlot ({
       message("Rendering Pathway Tree plot")
-      if (!is.null(treePlot())){
-        treePlot()}
+      if (!is.null(pathwayTreePlot())){
+        pathwayTreePlot()}
       else {
       }
     })  
     
     output$pathwayplotout3 <- renderPlot ({
       message("Rendering Pathway Gene-Concept Network plot")
-      if (!is.null(cnetPlot())){
-        cnetPlot()}
+      if (!is.null(pathwayCnetPlot())){
+        pathwayCnetPlot()}
       else {
       }
     })  
     
-    output$gseaplot <- renderPlot ({
+    output$pathwayGseaPlot <- renderPlot ({
       message("Rendering Pathway GSEA plot")
-      if (!is.null(gseaPlot()) & enrichment()$parameters$analysis=="GSEA"){
-        gseaPlot()}
+      if (!is.null(pathwayGseaPlot()) & pathwayEnrichment()$parameters$analysis=="GSEA"){
+        pathwayGseaPlot()}
       else {
       }
   })
     
     output$pathway <- renderUI({
-      if (!is.null(enrichment())) {
-        if (enrichment()$parameters$DB == "KEGG"){
+      if (!is.null(pathwayEnrichment())) {
+        if (pathwayEnrichment()$parameters$DB == "KEGG"){
           imageOutput("pathwayKegg", height = "750px")
         } else {
           imageOutput("pathwayReactome", height = "750px")
@@ -744,7 +738,7 @@ function(input, output, session) {
     
     output$pathwayKegg <- renderImage(deleteFile=F, {
       message("Rendering Pathway plot")
-      if (input$pathway!="None" & enrichment()$parameters$DB == "KEGG"){
+      if (input$pathway!="None" & pathwayEnrichment()$parameters$DB == "KEGG"){
         list(
           src = paste(getwd(), "/out/", input$pathway, ".png", sep=""),
           contentType = 'image/png',
@@ -756,7 +750,7 @@ function(input, output, session) {
     
     output$pathwayReactome <- renderImage(deleteFile=F, {
      # message("Warning : plotting fold change only for non-duplicate gene")
-     if (input$pathway!="None" & enrichment()$parameters$DB == "Reactome"){
+     if (input$pathway!="None" & pathwayEnrichment()$parameters$DB == "Reactome"){
        list(
          src = paste(getwd(), "/out/", gsub(" ", "_", input$pathway), ".png", sep=""),
          contentType = 'image/png',
@@ -766,188 +760,139 @@ function(input, output, session) {
        }}
       )
     
-    onStop(function() {
-      if (config$FILE$clear_cache == "True") {
-        if ((dir_size("./out") / (1024^2)) > config$FILE$max_cache_mb) {
-          message("Cache exceeding the authorised limit: cleaning cache...")
-          files_to_delete <- list.files(path = "./out", full.names = TRUE)
-          unlink(files_to_delete)
+  # -----------------------------------------
+  # Save and export functions
+  # -----------------------------------------
+
+   output$export_options <- renderUI({
+      choices <- list()
+      if (!is.null(preprocessedData()) && !is.na(preprocessedData()[1,1])) {
+        choices[["Whole Data Inspection (current VolcanoPlot & Table)"]] <- "WDI"
+      }
+      if (!is.null(goOraResults())) {
+        res <- goOraResults()
+        if (!is.null(res$up) || !is.null(res$down) || !is.null(res$both)) {
+          choices[["GO enrichment"]] <- "GO"
         }
       }
-      message("Thanks for using HEATraN!")
+      if (!is.null(pathwayEnrichment())) { choices[["Pathway enrichment"]] <- "PATH" }
+      checkboxGroupInput("export_choices",
+                         "Select results to export:",
+                         choices = choices)
     })
-      
-# Téléchargement du rapport complet
-output$downloadFullReport <- downloadHandler(
-  {print(input$export_ListOptions)
-  if(!is.null(enrichment()) && enrichment()$parameters$analysis=="GSEA" && "pathways"%in%input$export_ListOptions) {
-    gseaPlotList = list()
-    for (i in 1:length(enrichment()$enrichment$ID)) {
-      gseaPlotList[[i]] = gseaplot2(data, i)
-    } 
-  } else {
-    gseaPlotList = NULL
-  }},
+    
+  output$exportOptions <- downloadHandler(
+    filename = function() {
+      paste0("HEATraN_results_", Sys.Date(), ".html")
+    },
+    content = function(file) {
+      tempReport <- file.path(tempdir(), "template.Rmd")
+      file.copy("www/template.Rmd", tempReport, overwrite = T)
   
-  filename = function() {
-    paste0("HEATraN_Rapport_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".HTML")
-  },
-  content = function(file) {
-    tempReport <- file.path(tempdir(), "rapport.Rmd")
-    file.copy("www/template.Rmd", tempReport, overwrite = TRUE)
-    params <- list(
-      nGenes = input$export_GeneNumber,
-      volcanoPlot = if(!is.na(preprocessedData()[1,1])) { plot() } else { NULL },
-      tableData = if(!is.na(preprocessedData()[1,1])) { 
-        processedData()[processedData()$selected==TRUE,-c("selected","minuslog10")] 
-      } else { NULL },
-      enrichmentData = enrichment(),
-      dotPlot = if(!identical(dotPlot, emptyPlot)){ dotPlot() } else { NULL },
-      treePlot = if(!identical(treePlot, emptyPlot)){ treePlot() } else { NULL },
-      cnetPlot = if(!identical(cnetPlot, emptyPlot)){ cnetPlot() } else { NULL },
-      gseaPlot = gseaPlotList,
-      organismInfo = input$species
-    )
-    
-    # Générer le rapport
-    rmarkdown::render(tempReport, 
-                      output_file = file,
-                      output_format = paste0("html_document"),
-                      params = params,
-                      envir = new.env(parent = globalenv()))
-  }
-)
-
-
-# GSEA Dotplot
-output$gseaDotplot <- renderPlot({
-  req(gseaResults())
-  dotplot(gseaResults())
-})
-
-# GSEA Enrichment plot (top term)
-output$gseaEnrichmentPlot <- renderPlot({
-  req(gseaResults())
-  top_term <- gseaResults()@result$ID[1]
-  gseaplot(gseaResults(), by = "all", geneSetID = top_term)
-  #    gseaplot2(gseaResults(), geneSetID = top_term)
-}) 
-#GSEA RIDGE PLOT
-# GSEA Ridgeplot
-output$gseaRidgeplot <- renderPlot({
-  req(gseaResults())
-  ridgeplot(gseaResults(), showCategory = 13)
-})
-
-# GSEA TABLE
-output$gseaTable <- DT::renderDT({
-  req(gseaResults())
-  DT::datatable(as.data.frame(gseaResults()), options = list(pageLength = 10))
-})
-
-# Fonction pour exporter les résultats d'analyse
-output$exportReport <- downloadHandler(
-  filename = function() {
-    paste0("HEATraN_results_", Sys.Date(), ".html")
-  },
-  content = function(file) {
-    tempReport <- file.path(tempdir(), "template.Rmd")
-    file.copy("www/template.Rmd", tempReport, overwrite = TRUE)
-    
-    # Création d'une liste pour stocker les graphiques de visualisation des pathways
-    pathwayViewPlots <- list()
-    
-    if (!is.null(enrichment())) {
-      data <- enrichment()$enrichment
-      db <- enrichment()$parameters$DB
+      pathwayViewPlots <- list()
       
-      if (db == "KEGG") {
-        # Pour KEGG, utiliser les images générées par pathview
-        for (i in 1:nrow(data)) {
-          tryCatch({
-            pathway_id <- data$ID[i]
-            img_path <- paste0("./out/", pathway_id, ".pathview.png")
-            if (file.exists(img_path)) {
-              pathwayViewPlots[[i]] <- png::readPNG(img_path)
-            } else {
-              pathwayViewPlots[[i]] <- NULL
-            }
-          }, error = function(e) {
-            message(paste("Error loading KEGG pathway image:", e$message))
-            pathwayViewPlots[[i]] <- NULL
-          })
-        }
-      } else if (db == "Reactome") {
-        # Pour Reactome, utiliser les images sauvegardées ou les récupérer si nécessaire
-        for (i in 1:nrow(data)) {
-          tryCatch({
-            pathway_name <- data$Description[i]
-            safe_name <- gsub("[^a-zA-Z0-9]", "_", pathway_name)
-            img_path <- paste0("./out/", safe_name, ".png")
-            
-            if (file.exists(img_path)) {
-              pathwayViewPlots[[i]] <- png::readPNG(img_path)
-            } else if (!is.null(enrichment()$pathway_images) && !is.null(enrichment()$pathway_images[[i]])) {
-              # Utiliser le chemin stocké dans l'objet enrichment s'il existe
-              img_path <- enrichment()$pathway_images[[i]]
+      if (!is.null(pathwayEnrichment())) {
+        data <- pathwayEnrichment()$enrichment
+        db <- pathwayEnrichment()$parameters$DB
+        
+        if (db == "KEGG") {
+          for (i in 1:nrow(data)) {
+            tryCatch({
+              pathway_id <- data$ID[i]
+              img_path <- paste0("./out/", pathway_id, ".pathview.png")
               if (file.exists(img_path)) {
                 pathwayViewPlots[[i]] <- png::readPNG(img_path)
-              }
-            } else {
-              # Si l'image n'existe pas encore, générer à la volée
-              pathway_id <- data$ID[i]
-              api_url <- paste0("https://reactome.org/ContentService/exporter/diagram/", 
-                                pathway_id, ".png?quality=7")
-              
-              # Télécharger l'image
-              tmp_file <- tempfile(fileext = ".png")
-              download.file(api_url, tmp_file, mode = "wb", quiet = TRUE)
-              if (file.exists(tmp_file)) {
-                pathwayViewPlots[[i]] <- png::readPNG(tmp_file)
-                file.remove(tmp_file)
               } else {
                 pathwayViewPlots[[i]] <- NULL
               }
-            }
-          }, error = function(e) {
-            message(paste("Error loading Reactome pathway image:", e$message))
-            pathwayViewPlots[[i]] <- NULL
-          })
+            }, error = function(e) {
+              message(paste("Error loading KEGG pathway image:", e$message))
+              pathwayViewPlots[[i]] <- NULL
+            })
+          }
+        } else if (db == "Reactome") {
+          for (i in 1:nrow(data)) {
+            tryCatch({
+              pathway_name <- data$Description[i]
+              safe_name <- gsub("[^a-zA-Z0-9]", "_", pathway_name)
+              img_path <- paste0("./out/", safe_name, ".png")
+              
+              if (file.exists(img_path)) {
+                pathwayViewPlots[[i]] <- png::readPNG(img_path)
+              } else if (!is.null(pathwayEnrichment()$pathway_images) && !is.null(pathwayEnrichment()$pathway_images[[i]])) {
+                img_path <- pathwayEnrichment()$pathway_images[[i]]
+                if (file.exists(img_path)) {
+                  pathwayViewPlots[[i]] <- png::readPNG(img_path)
+                }
+              } else {
+                pathway_id <- data$ID[i]
+                api_url <- paste0("https://reactome.org/ContentService/exporter/diagram/", 
+                                  pathway_id, ".png?quality=7")
+                
+                tmp_file <- tempfile(fileext = ".png")
+                download.file(api_url, tmp_file, mode = "wb", quiet = T)
+                if (file.exists(tmp_file)) {
+                  pathwayViewPlots[[i]] <- png::readPNG(tmp_file)
+                  file.remove(tmp_file)
+                } else {
+                  pathwayViewPlots[[i]] <- NULL
+                }
+              }
+            }, error = function(e) {
+              message(paste("Error loading Reactome pathway image:", e$message))
+              pathwayViewPlots[[i]] <- NULL
+            })
+          }
         }
       }
-    }
-    
-    includeWDI = ifelse("WDI" %in% input$exportSections, TRUE, FALSE)
-    includeGO = ifelse("GO" %in% input$exportSections, TRUE, FALSE)
-    includePATHWAY = ifelse("PATHWAY" %in% input$exportSections, TRUE, FALSE)
-    
-    # Rendre le document R Markdown
-    rmarkdown::render(
-      input = tempReport,
-      output_file = file,
-      params = list(
-        nGenes = input$nGenesExport,
-        volcanoPlot = plot(),
-        tableData = processedData()[processedData()$selected == TRUE, -c("selected", "minuslog10")],
-        enrichmentData = enrichment(),
-        gseaPlot = if (!is.null(enrichment()) && enrichment()$parameters$analysis == "GSEA") {
-          lapply(1:nrow(enrichment()$enrichment), function(i) {
-            gseaplot2(enrichment()$enrichment, i)
-          })
-        } else NULL,
-        treePlot = if (!is.null(enrichment())) treePlot() else NULL,
-        dotPlot = if (!is.null(enrichment())) dotPlot() else NULL,
-        cnetPlot = if (!is.null(enrichment())) cnetPlot() else NULL,
-        pathwayViewPlots = pathwayViewPlots,
-        organismInfo = input$species,
-        includeWDI = includeWDI,
-        includeGO = includeGO,
-        includePATHWAY = includePATHWAY,
-        includeGSEAplots = input$includeGSEA,
-        includePathwayViews = input$includePathwayViews
-      ),
-      envir = new.env()
+      
+      includeWDI = ifelse("WDI" %in% input$exportSections, T, F)
+      includeGO = ifelse("GO" %in% input$exportSections, T, F)
+      includePATHWAY = ifelse("PATHWAY" %in% input$exportSections, T, F)
+      
+      # Rendre le document R Markdown
+      rmarkdown::render(
+        input = tempReport,
+        output_file = file,
+        params = list(
+          nGenes = input$nGenesExport,
+          volcanoPlot = plot(),
+          tableData = processedData()[processedData()$selected == T, -c("selected", "minuslog10")],
+          enrichmentData = pathwayEnrichment(),
+          pathwayGseaPlot = if (!is.null(pathwayEnrichment()) && pathwayEnrichment()$parameters$analysis == "GSEA") {
+            lapply(1:nrow(pathwayEnrichment()$enrichment), function(i) {
+              pathwayGseaPlot2(pathwayEnrichment()$enrichment, i)
+            })
+          } else NULL,
+          pathwayTreePlot = if (!is.null(pathwayEnrichment())) pathwayTreePlot() else NULL,
+          pathwayDotPlot = if (!is.null(pathwayEnrichment())) pathwayDotPlot() else NULL,
+          pathwayCnetPlot = if (!is.null(pathwayEnrichment())) pathwayCnetPlot() else NULL,
+          pathwayViewPlots = pathwayViewPlots,
+          organismInfo = input$species,
+          includeWDI = includeWDI,
+          includeGO = includeGO,
+          includePATHWAY = includePATHWAY,
+          includepathwayGseaPlots = input$includeGSEA,
+          includePathwayViews = input$includePathwayViews
+        ),
+        envir = new.env()
+        )
+      }
     )
-  }
-)
+
+  
+  
+  # Functions launched when the application is closed
+  onStop(function() {
+    if (config$FILE$clear_cache == "True") {
+      if ((dir_size("./out") / (1024^2)) > config$FILE$max_cache_mb) {
+        message("Cache exceeding the authorised limit: cleaning cache...")
+        files_to_delete <- list.files(path = "./out", full.names = T)
+        unlink(files_to_delete)
+      }
+    }
+    message("Thanks for using HEATraN!")
+  })
+
 }
+
