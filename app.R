@@ -20,5 +20,15 @@ library(wordcloud)
 library(enrichplot)
 library(plotly)
 library(shinydashboardPlus) # Ajoutez cette ligne
-#BiocManager::install("aplot") # i did add it  for gseaplot2
+library(treemap)
+library(simplifyEnrichment)
+library(clusterProfiler)
+# BiocManager::install("GOSemSim", force = T)
+# BiocManager::install("topGO")
+library(GOSemSim)
+library(topGO)
+library(topGO)
+library(GO.db)
+
+#BiocManager::install("simplifyEnrichment") # i did add it  for gseaplot2
 shinyAppDir("bin/")

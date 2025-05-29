@@ -277,9 +277,15 @@ function(input, output, session) {
   })
   # GO Analysis reactive values
   # GO Analysis reactive values
+  geneGroups <- reactiveValues(
+    up = NULL,
+    down = NULL,
+    both = NULL
+  )
+  topGOdataList <- reactiveValues(up=NULL, down=NULL, both=NULL)
+  
   goResults <- reactiveVal(NULL)
-  # Reactive value for GSEA results
-  gseaResults <- reactiveVal(NULL)
+  
   
   observeEvent(input$go_analysisButton, {
     req(preprocessedData())
@@ -302,6 +308,10 @@ function(input, output, session) {
       up_genes <- names(genes)[genes > 0]
       down_genes <- names(genes)[genes < 0]
       
+      both_genes <- union(up_genes, down_genes)
+      geneGroups$up <- up_genes
+      geneGroups$down <- down_genes
+      geneGroups$both <- both_genes
       # Sélection de l'ontologie GO et de l'organisme
       ontology <- input$inputGO
       organism <- input$organism
@@ -310,26 +320,8 @@ function(input, output, session) {
       
       # Méthode d’analyse : ORA ou GSEA
       if ("Gene Set Enrichment Analysis (GSEA)" %in% input$go_analysisMethodChoice) {
-        df <- preprocessedData()
-        gene_list <- df$Log2FC
-        names(gene_list) <- df$GeneID
-        gene_list <- sort(na.omit(gene_list), decreasing = TRUE)
+        # GSEA à implémenter ici
         
-        #analyse GSEA
-        gsea_result <- gseGO(
-          geneList      = gene_list,
-          OrgDb         = get(input$organism),  
-          ont           = input$inputGO,        
-          keyType       = "ENSEMBL",
-          pvalueCutoff  = input$go_pval,
-          verbose       = FALSE
-        )
-        
-     
-        
-        gseaResults(gsea_result) 
-       
- 
       } else {
         # ORA selon les sélections
         analyze_up <- "Over expressed DEG" %in% input$go_oraChoice
@@ -389,6 +381,47 @@ function(input, output, session) {
         goResults(list(up = result_up, down = result_down, both = result_both))
       }
     })
+    # Créer la liste binaire pour topGO
+    allGenesBinary <- as.integer(names(gene_list) %in% both_genes)
+    names(allGenesBinary) <- names(gene_list)
+    
+    # Même chose pour up et down
+    upGenesBinary <- as.integer(names(gene_list) %in% up_genes)
+    names(upGenesBinary) <- names(gene_list)
+    
+    downGenesBinary <- as.integer(names(gene_list) %in% down_genes)
+    names(downGenesBinary) <- names(gene_list)
+    
+    # Créer les objets topGOdata
+    GOdata_up <- new("topGOdata",
+                     ontology = ontology,
+                     allGenes = upGenesBinary,
+                     geneSelectionFun = function(x)(x < 0.05),
+                     annot = annFUN.org,
+                     mapping = organism,
+                     ID = "ensembl")
+    
+    GOdata_down <- new("topGOdata",
+                       ontology = ontology,
+                       allGenes = downGenesBinary,
+                       geneSelectionFun = function(x)(x < 0.05),
+                       annot = annFUN.org,
+                       mapping = organism,
+                       ID = "ensembl")
+    
+    GOdata_both <- new("topGOdata",
+                       ontology = ontology,
+                       allGenes = allGenesBinary,
+                       geneSelectionFun = function(x)(x < 0.05),
+                       annot = annFUN.org,
+                       mapping = organism,
+                       ID = "ensembl")
+    
+    # Stocker dans reactiveValues
+    topGOdataList$up <- GOdata_up
+    topGOdataList$down <- GOdata_down
+    topGOdataList$both <- GOdata_both
+    
   })
   
   # === PLOTS ORA ===
@@ -402,35 +435,31 @@ function(input, output, session) {
   #           font.size = 8)
   # })
   
-  output$goBarplotUp <- renderPlot({
-    req(goResults()$up)
-    barplot(goResults()$up)
-  })
-  
   output$goBarplotDown <- renderPlot({
-    req(goResults()$down)
-    barplot(goResults()$down,
-            drop = TRUE,
-            showCategory = input$topCategoriesDown,
-            title = "GO Biological Pathways (Down-regulated)",
-            font.size = 8)
+    if (!is.null(topGOdataList$down) && !is.null(geneGroups$down) && length(geneGroups$down) > 0) {
+      barplot(topGOdataList$down, showCategory = 10)
+    } else {
+      plot.new()
+      text(0.5, 0.5, "No data available for down-regulated genes")
+    }
   })
   
   output$goBarplotBoth <- renderPlot({
-    req(goResults()$both)
-    barplot(goResults()$both,
-            drop = TRUE,
-            showCategory = input$topCategoriesUp,  # tu peux ajuster si nécessaire
-            title = "GO Biological Pathways (Both-regulated)",
-            font.size = 8)
+    if (!is.null(topGOdataList$both) && !is.null(geneGroups$both) && length(geneGroups$both) > 0) {
+      barplot(topGOdataList$both, showCategory = 10)
+    } else {
+      plot.new()
+      text(0.5, 0.5, "No data available for both-regulated genes")
+    }
   })
+  
   
   # Dotplots
   output$goDotplotUp <- renderPlot({
     req(goResults()$up)
     dotplot(goResults()$up)
   })
- 
+  
   
   output$goDotplotDown <- renderPlot({
     req(goResults()$down)
@@ -466,45 +495,243 @@ function(input, output, session) {
   # === TABLES ORA ===
   output$goTableUp <- DT::renderDT({
     req(goResults()$up)
-    DT::datatable(as.data.frame(goResults()$up), options = list(pageLength = 10))
+    df <- as.data.frame(goResults()$up)
+    for (i in 1:length(df$ID)) {
+      df$ID[i] <- paste0('<a href="https://www.ebi.ac.uk/QuickGO/term/', df$ID[i],
+                         '" target="_blank">', df$ID[i], '</a>')
+    }
+    
+    DT::datatable(df, escape = FALSE, options = list(pageLength = 10))
   })
+  
+  
   
   output$goTableDown <- DT::renderDT({
     req(goResults()$down)
-    DT::datatable(as.data.frame(goResults()$down), options = list(pageLength = 10))
+    df <- as.data.frame(goResults()$down)
+    
+    
+    for (i in 1:length(df$ID)) {
+      df$ID[i] <- paste0('<a href="https://www.ebi.ac.uk/QuickGO/term/', df$ID[i],
+                         '" target="_blank">', df$ID[i], '</a>')
+    }
+    
+    DT::datatable(df, escape = FALSE, options = list(pageLength = 10))
   })
   
   output$goTableBoth <- DT::renderDT({
     req(goResults()$both)
-    DT::datatable(as.data.frame(goResults()$both), options = list(pageLength = 10))
+    df <- as.data.frame(goResults()$both)
+    
+    for (i in 1:length(df$ID)) {
+      df$ID[i] <- paste0('<a href="https://www.ebi.ac.uk/QuickGO/term/', df$ID[i],
+                         '" target="_blank">', df$ID[i], '</a>')
+    }
+    
+    DT::datatable(df, escape = FALSE)
+  })
+  ################upset plot
+  
+  output$upsetplotUp <- renderPlot({
+    req(goResults()$up)
+    upsetplot(goResults()$up)
+    
   })
   
-  # GSEA Dotplot
-  output$gseaDotplot <- renderPlot({
-    req(gseaResults())
-    dotplot(gseaResults())
+  output$upsetplotDown <- renderPlot({
+    req(goResults()$down)
+    upsetplot(goResults()$down)
   })
   
-  # GSEA Enrichment plot (top term)
-  output$gseaEnrichmentPlot <- renderPlot({
-   req(gseaResults())
-   top_term <- gseaResults()@result$ID[1]
-   gseaplot(gseaResults(), by = "all", geneSetID = top_term)
-#    gseaplot2(gseaResults(), geneSetID = top_term)
-  }) 
-  #GSEA RIDGE PLOT
-  # GSEA Ridgeplot
-  output$gseaRidgeplot <- renderPlot({
-    req(gseaResults())
-    ridgeplot(gseaResults(), showCategory = 13)
+  output$upsetplotBoth <- renderPlot({
+    req(goResults()$both)
+    upsetplot(goResults()$both)})
+  # ########"
+  # # Network plots
+  # output$goNetplotUp <- renderPlot({
+  #   req(goResults()$up)
+  #   go_enrich <- pairwise_termsim(goResults()$up)
+  #   # emapplot(go_enrich, layout = "kk", showCategory = 15)
+  #   emapplot(go_enrich, layout.params = list(layout = "kk"), showCategory = 15)
+  #   
+  # })
+  # 
+  # output$goNetplotDown <- renderPlot({
+  #   req(goResults()$down)
+  #   go_enrich <- pairwise_termsim(goResults()$down)
+  #   emapplot(go_enrich, layout = "kk", showCategory = 15)
+  # })
+  # 
+  # output$goNetplotBoth <- renderPlot({
+  #   req(goResults()$both)
+  #   go_enrich <- pairwise_termsim(goResults()$both)
+  #   emapplot(go_enrich, layout = "kk", showCategory = 15)
+  # })
+  
+  # CNE plot 
+  output$cneUp <- renderPlot({
+    req(goResults()$up)
+    cnetplot(goResults()$up, showCategory = 10, foldChange = geneGroups$up )
   })
   
-  # GSEA TABLE
-  output$gseaTable <- DT::renderDT({
-    req(gseaResults())
-    DT::datatable(as.data.frame(gseaResults()), options = list(pageLength = 10))
+  output$cneDown <- renderPlot({
+    req(goResults()$up)
+    cnetplot(goResults()$up, showCategory = 10, foldChange = geneGroups$down)
+  })
+  
+  output$cneBoth <- renderPlot({
+    req(goResults()$both)
+    cnetplot(goResults()$both, showCategory = 10, foldChange = geneGroups$both)
+  })
+  ###########################################
+  
+  
+  # output$goTreeplotUp <- renderPlot({
+  #   req(goResults()$up)
+  #   str(goResults()$up)
+  #   go_up <- enrichplot::pairwise_termsim(goResults()$up)
+  #   treeplot(go_up)
+  # })
+  # 
+  # 
+  # output$goTreemapUp <- renderPlot({
+  #   req(goResults()$up)
+  #   df <- as.data.frame(goResults()$up)
+  #   if (nrow(df) == 0) {
+  #     plot.new(); title("Aucun terme GO significatif")
+  #     return()
+  #   }
+  #   df_clean =df[1:8,]
+  #   df_clean$Description <- ifelse(nchar(df_clean$Description) > 10,
+  #                                  paste0(substr(df_clean$Description, 1, 5), "..."),
+  #                                  df_clean$Description)
+  #   treemap::treemap(df_clean,
+  #                    index = "Description",
+  #                    vSize = "Count",
+  #                    vColor = "p.adjust",
+  #                    type = "value",
+  #                    palette = "RdYlBu")
+  # })
+  # 
+  #####graph : 
+  # 
+  # # Création des objets topGOdata pour chaque groupe
+  # GOdata_up <- new("topGOdata",
+  #                  ontology = "BP",
+  #                  allGenes =  geneGroups$up ,
+  #                  annot = annFUN.org,
+  #                  mapping = organism,
+  #                  ID = "ensembl")
+  # 
+  # GOdata_down <- new("topGOdata",
+  #                    ontology = "BP",
+  #                    allGenes = geneGroups$down,                
+  #                    annot = annFUN.org,
+  #                    mapping = organism,
+  #                    ID = "ensembl")
+  # 
+  # GOdata_both <- new("topGOdata",
+  #                    ontology = "BP",
+  #                    allGenes = gene_list,
+  #                    annot = annFUN.org,
+  #                    mapping = organism,
+  #                    ID = "ensembl")
+  # 
+  # # Stocker dans reactiveValues pour pouvoir les utiliser dans renderPlot
+  # topGOdataList <- reactiveValues(
+  #   up = GOdata_up,
+  #   down = GOdata_down,
+  #   both = GOdata_both
+  # )
+  # 
+  
+  # # # Fonction helper pour plot un graph topGO
+  # output$plotTopGO <- renderPlot({
+  #   req(topGOdataList[[input$groupGO]])
+  #    
+  #   result <- runTest(topGOdataList[[input$groupGO]], algorithm = "classic", statistic = "fisher")
+  #   
+  #   showSigOfNodes(topGOdataList[[input$groupGO]], score(result), firstSigNodes = input$nbTopGO)
+  # })
+  # 
+  output$plotTopGOUp <- renderPlot({
+    req(topGOdataList$up)
+    
+    result <- runTest(topGOdataList$up, 
+                      algorithm = "classic", 
+                      statistic = "fisher")
+    
+    showSigOfNodes(topGOdataList$up, 
+                   score(result), 
+                   firstSigNodes = input$nbTopGO)
+  })
+  
+  output$plotTopGODown <- renderPlot({
+    req(topGOdataList$down)
+    
+    result <- runTest(topGOdataList$down, 
+                      algorithm = "classic", 
+                      statistic = "fisher")
+    
+    showSigOfNodes(topGOdataList$down, 
+                   score(result), 
+                   firstSigNodes = input$nbTopGO)
+  })
+  
+  output$plotTopGOBoth <- renderPlot({
+    req(topGOdataList$both)
+    
+    result <- runTest(topGOdataList$both, 
+                      algorithm = "classic", 
+                      statistic = "fisher")
+    
+    showSigOfNodes(topGOdataList$both, 
+                   score(result), 
+                   firstSigNodes = input$nbTopGO)
   })
   
   
+  
+  # plotTopGO <- function(GOdata, firstSigNodes) {
+  #   message("Running runTest...")
+  #   scoreFisher <- runTest(GOdata, algorithm = "classic", statistic = "fisher")
+  #   message("Running showSigOfNodes...")
+  #   #showSigOfNodes(GOdata, score(scoreFisher), firstSigNodes = firstSigNodes)
+  #   showSigOfNodes(GOdata, score(resultFisher), firstSigNodes = 5)
+  #   
+  #   printGraph(GOdata)
+  #   
+  # }
+  # 
+  # # Rendu plot UP
+  # output$topGOgraph_up <- renderPlot({
+  #   req(topGOdataList$up)
+  #   req(input$firstSigNodes)
+  #   scoreFisher <- runTest(GOdata, algorithm = "classic", statistic = "fisher")
+  #   message("Running showSigOfNodes...")
+  #   #showSigOfNodes(GOdata, score(scoreFisher), firstSigNodes = firstSigNodes)
+  #   showSigOfNodes(GOdata, score(resultFisher), firstSigNodes = 5)
+  #   
+  #   message("Rendering topGOgraph_up...")
+  #  # plotTopGO(topGOdataList$up, input$firstSigNodes)
+  # })
+  # 
+  # Rendu plot DOWN
+  # output$topGOgraph_down <- renderPlot({
+  #   req(topGOdataList$down)
+  #   req(input$firstSigNodes)
+  #   message("Rendering topGOgraph_down...")
+  #   plotTopGO(topGOdataList$down, input$firstSigNodes)
+  #   
+  # })
+  # 
+  # # Rendu plot BOTH
+  # output$topGOgraph_both <- renderPlot({
+  #   req(topGOdataList$both)
+  #   req(input$firstSigNodes)
+  #   message("Rendering topGOgraph_both...")
+  #   plotTopGO(topGOdataList$both, input$firstSigNodes)
+  # })
+  # 
   
 }
