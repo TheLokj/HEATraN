@@ -6,7 +6,7 @@
 # Master of Bioinformatics, class M2.2 BIMS 2026 
 # Last updated : 08/05/2025
 # HEATraN version 0.3.0
-
+options(clusterProfiler.download.method = "wget")
 
 library(clusterProfiler)
 library(ReactomePA)
@@ -55,12 +55,40 @@ getKEGGpathway = function(geneList, pathwayID, organism, local=T){
   if (local){
     wd = getwd()
     setwd(paste(wd, "/out", sep=""))
-    try(pathview(gene.data  = geneList, pathway.id = pathwayID, species = organism, kegg.dir="."))
-    setwd(wd)
-    } else {
+    
+    # Générer l'image avec pathview
+    tryCatch({
+      pathview(gene.data = geneList, pathway.id = pathwayID, species = organism, kegg.dir=".")
+      
+      # Construire les noms de fichiers générés par pathview
+      base_filename <- paste(pathwayID, ".pathview", sep="")
+      png_file <- paste0(base_filename, ".png")
+      multi_png_file <- paste0(base_filename, ".multi.png")
+      
+      # Vérifier quels fichiers ont été créés et retourner les chemins
+      generated_files <- c()
+      if (file.exists(png_file)) {
+        generated_files <- c(generated_files, file.path(wd, "out", png_file))
+      }
+      if (file.exists(multi_png_file)) {
+        generated_files <- c(generated_files, file.path(wd, "out", multi_png_file))
+      }
+      
+      setwd(wd)
+      return(generated_files)
+      
+    }, error = function(e) {
+      setwd(wd)
+      message(paste("Erreur lors de la génération du pathway:", e$message))
+      return(NULL)
+    })
+    
+  } else {
     browseKEGG(geneList, pathwayID)
-  } 
+    return(NULL)  # Pas de fichier généré en mode navigateur
+  }
 }
+
     
 getReactomePathway <- function(rankedLog2FC, pathwayIDs, pathwayDesc, organism) {
   if (!dir.exists("./out/")) {
@@ -168,19 +196,28 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
     #--- Analysis ---#
     if (DB == "KEGG"){
       enrichment = enrichKEGG(genesList, organism=orgs[orgs$organism==organism, "TLname"], universe=data$entrezIds, pvalueCutoff = pval)
-      getKEGGpathway(enrichment@gene, enrichment$ID, organism=orgs[orgs$organism==organism, "TLname"], local=T)
+      pathway_images <- NULL
+      if(nrow(enrichment@result) > 0) {
+        pathway_images <- mapply(function(pathway_id) {
+          getKEGGpathway(enrichment@result[enrichment@result$ID == pathway_id, "geneID"], 
+                         pathway_id, 
+                         organism=orgs[orgs$organism==organism, "TLname"], 
+                         local=T)
+        }, enrichment@result$ID, SIMPLIFY=FALSE)
+      }
     }
     if (DB == "Reactome"){
       enrichment = enrichPathway(genesList, organism=orgs[orgs$organism==organism, "commonName"], universe=data$entrezIds, pvalueCutoff = pval)
-      print(enrichment)
-      pathway_images <- getReactomePathway(data$ranked, 
-                                           enrichment$ID,  
-                                           enrichment$Description, 
-                                           organism=orgs[orgs$organism==organism, "commonName"])
-      enrichment$pathway_images <- pathway_images
-       }
-    return(list(enrichment=enrichment, processedData = data, parameters=parameters))
+      pathway_images <- NULL
+        if(nrow(enrichment@result) > 0) {
+          pathway_images <- getReactomePathway(data$ranked,
+                                               enrichment$ID,
+                                               enrichment$Description,
+                                               organism=orgs[orgs$organism==organism, "commonName"])
+        }
     }
+    return(list(enrichment=enrichment, processedData = data, parameters=parameters, pathway_images=pathway_images))
+  }
   if (analysis == "GSEA"){
     message("Doing Gene Set Enrichment Analysis on differentially expressed genes regarding their pathway.")
     #--- Preprocess ---#
@@ -195,20 +232,32 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
                                                pvalueCutoff = pval,
                                                minGSSize    = 10, #Previously 120
                                                verbose      = FALSE)
-      getKEGGpathway(enrichment$core_enrichment, enrichment$ID, organism=orgs[orgs$organism==organism, "TLname"], local=T)}
+      pathway_images <- NULL
+      if(nrow(enrichment@result) > 0) {
+        pathway_images <- mapply(function(pathway_id) {
+          getKEGGpathway(enrichment@result[enrichment@result$ID == pathway_id, "core_enrichment"], 
+                         pathway_id, 
+                         organism=orgs[orgs$organism==organism, "TLname"], 
+                         local=T)
+        }, enrichment@result$ID, SIMPLIFY=FALSE)
+      }
+    }
     if (DB == "Reactome"){
       enrichment = gsePathway(data$ranked, 
                                organism=orgs[orgs$organism==organism, "commonName"],
                                pvalueCutoff = pval,
                                minGSSize    = 10, #Previously 120
                                verbose      = FALSE)
-      pathway_images <- getReactomePathway(data$ranked, 
-                                           enrichment$ID,  
-                                           enrichment$Description, 
-                                           organism=orgs[orgs$organism==organism, "commonName"])
+      pathway_images <- NULL
+        if(nrow(enrichment@result) > 0) {
+          pathway_images <- getReactomePathway(data$ranked,
+                                               enrichment$ID,
+                                               enrichment$Description,
+                                               organism=orgs[orgs$organism==organism, "commonName"])
+        }
     }
-    return(list(enrichment=enrichment, processedData = data, parameters=parameters))
-    enrichment$pathway_images <- pathway_images
+    
+    return(list(enrichment=enrichment, processedData = data, parameters=parameters, pathway_images=pathway_images))
     }
 }
 

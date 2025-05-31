@@ -19,9 +19,12 @@ library(DT)
 library(ini)
 library(fs)
 library(knitr)
-library(wordcloud)
 library(enrichplot)
 library(shinydashboardPlus) 
+library(GOSemSim)
+library(topGO)
+library(GO.db)
+#library(UpSetR)
 
 shinyAppDir("bin/")
 

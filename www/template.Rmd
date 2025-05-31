@@ -13,21 +13,53 @@ output:
     df_print: paged
     fig_caption: true
 params:
+  # General parameters
   nGenes: 20
   volcanoPlot: NULL
   tableData: NULL
-  enrichmentData: NULL
-  gseaPlot: NULL
-  treePlot: NULL
-  dotPlot: NULL
-  cnetPlot: NULL
   organismInfo: "Unspecified"
+  
+  # GO Enrichment - Barplots
+  goBarplotUp: NULL
+  goBarplotDown: NULL
+  goBarplotBoth: NULL
+  
+  # GO Enrichment - Dotplots
+  goDotplotUp: NULL
+  goDotplotDown: NULL
+  goDotplotBoth: NULL
+  
+  # GO Enrichment - Network plots
+  goNetplotUp: NULL
+  goNetplotDown: NULL
+  goNetplotBoth: NULL
+  
+  # GO Enrichment - Tables
+  goTableUp: NULL
+  goTableDown: NULL
+  goTableBoth: NULL
+  
+  # GO GSEA
+  goGseaDotplot: NULL
+  goGseaEnrichmentPlot: NULL
+  goGseaRidgeplot: NULL
+  goGseaTable: NULL
+  
+  # Pathway Enrichment
+  enrichmentData: NULL
+  pathwayTable: NULL
+  pathwayDotPlot: NULL
+  pathwayTreePlot: NULL
+  pathwayCnetPlot: NULL
+  pathwayGseaPlot: NULL
+  pathwayViewPlots: NULL
+  
+  # Control flags
   includeWDI: TRUE
   includeGO: TRUE
   includePATHWAY: TRUE
-  includeGSEAplots: FALSE
+  includepathwayGseaPlots: FALSE
   includePathwayViews: FALSE
-  pathwayViewPlots: NULL 
 ---
 
 <style>
@@ -597,6 +629,7 @@ pre {
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 library(knitr)
 library(DT)
+library(grid)
 ```
 
 # Analysis overview
@@ -605,94 +638,332 @@ This report contains the results of the HEATraN analysis carried out on `r forma
 
 **Organism studied**: `r params$organismInfo`
 
-## Volcano Plot
+# Whole Data Inspection
 
-```{r echo=FALSE, fig.width=8, fig.height=6, results='asis'}
-if (!is.null(params$volcanoPlot) & params$includeWDI) {
-  params$volcanoPlot
+```{r echo=FALSE, eval=params$includeWDI, results='asis'}
+if (params$includeWDI) {
+  cat("## Volcano Plot\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeWDI, fig.width=8, fig.height=6}
+if (!is.null(params$volcanoPlot) && params$includeWDI) {
+  print(params$volcanoPlot)
 } else if (params$includeWDI) {
   plot(1, type="n", axes=FALSE, xlab="", ylab="")
   text(1, 1, "No volcano plot data available")
 }
 ```
 
-## Selected data table
+```{r echo=FALSE, eval=params$includeWDI, results='asis'}
+if (params$includeWDI) {
+  cat("## Selected data table\n\n")
+}
+```
 
-```{r echo=FALSE, results='asis'}
-if (!is.null(params$tableData) & (nrow(params$tableData) > params$nGenes) & params$includeWDI) {
-  kable(head(params$tableData, params$nGenes), caption = paste("Top", params$nGenes, "selected genes"))
+```{r echo=FALSE, eval=params$includeWDI, results='asis'}
+if (!is.null(params$tableData) && params$includeWDI) {
+  if (nrow(params$tableData) > params$nGenes) {
+    kable(head(params$tableData, params$nGenes), caption = paste("Top", params$nGenes, "selected genes"))
+  } else {
+    kable(params$tableData, caption = "Selected genes")
+  }
 } else if (params$includeWDI) {
-  cat("No data available")
+  cat("No data available\n\n")
 }
 ```
 
-## Metabolic pathway analysis results
+# GO Enrichment Analysis
 
-```{r echo=FALSE, results='asis'}
-if (!is.null(params$enrichmentData) & params$includePATHWAY) {
-  cat("## Metabolic pathway analysis results\n\n")
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (params$includeGO && ((!is.null(params$goBarplotUp)) || (!is.null(params$goBarplotDown)) || (!is.null(params$goBarplotBoth)))) {
+  cat("## GO Over-Representation Analysis\n\n")
+  cat("### Bar plots {.tabset .tabset-fade}\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (!is.null(params$goBarplotUp) && params$includeGO) {
+  cat("#### Up-regulated genes\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, fig.width=8, fig.height=6}
+if (!is.null(params$goBarplotUp) && params$includeGO) {
+  print(params$goBarplotUp)
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (!is.null(params$goBarplotDown) && params$includeGO) {
+  cat("#### Down-regulated genes\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, fig.width=8, fig.height=6}
+if (!is.null(params$goBarplotDown) && params$includeGO) {
+  print(params$goBarplotDown)
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (!is.null(params$goBarplotBoth) && params$includeGO) {
+  cat("#### Both directions\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, fig.width=8, fig.height=6}
+if (!is.null(params$goBarplotBoth) && params$includeGO) {
+  print(params$goBarplotBoth)
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (params$includeGO && ((!is.null(params$goDotplotUp)) || (!is.null(params$goDotplotDown)) || (!is.null(params$goDotplotBoth)))) {
+  cat("### Dot plots {.tabset .tabset-fade}\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (!is.null(params$goDotplotUp) && params$includeGO) {
+  cat("#### Up-regulated genes\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, fig.width=8, fig.height=6}
+if (!is.null(params$goDotplotUp) && params$includeGO) {
+  print(params$goDotplotUp)
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (!is.null(params$goDotplotDown) && params$includeGO) {
+  cat("#### Down-regulated genes\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, fig.width=8, fig.height=6}
+if (!is.null(params$goDotplotDown) && params$includeGO) {
+  print(params$goDotplotDown)
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (!is.null(params$goDotplotBoth) && params$includeGO) {
+  cat("#### Both directions\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, fig.width=8, fig.height=6}
+if (!is.null(params$goDotplotBoth) && params$includeGO) {
+  print(params$goDotplotBoth)
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (params$includeGO && ((!is.null(params$goNetplotUp)) || (!is.null(params$goNetplotDown)) || (!is.null(params$goNetplotBoth)))) {
+  cat("### Network plots {.tabset .tabset-fade}\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (!is.null(params$goNetplotUp) && params$includeGO) {
+  cat("#### Up-regulated genes\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, fig.width=10, fig.height=8}
+if (!is.null(params$goNetplotUp) && params$includeGO) {
+  print(params$goNetplotUp)
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (!is.null(params$goNetplotDown) && params$includeGO) {
+  cat("#### Down-regulated genes\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, fig.width=10, fig.height=8}
+if (!is.null(params$goNetplotDown) && params$includeGO) {
+  print(params$goNetplotDown)
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (!is.null(params$goNetplotBoth) && params$includeGO) {
+  cat("#### Both directions\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, fig.width=10, fig.height=8}
+if (!is.null(params$goNetplotBoth) && params$includeGO) {
+  print(params$goNetplotBoth)
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (params$includeGO && ((!is.null(params$goTableUp)) || (!is.null(params$goTableDown)) || (!is.null(params$goTableBoth)))) {
+  cat("### Enrichment tables {.tabset .tabset-fade}\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (!is.null(params$goTableUp) && params$includeGO) {
+  cat("#### Up-regulated genes\n\n")
+  print(datatable(params$goTableUp, options = list(pageLength = 10, scrollX = TRUE)))
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (!is.null(params$goTableDown) && params$includeGO) {
+  cat("#### Down-regulated genes\n\n")
+  print(datatable(params$goTableDown, options = list(pageLength = 10, scrollX = TRUE)))
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (!is.null(params$goTableBoth) && params$includeGO) {
+  cat("#### Both directions\n\n")
+  print(datatable(params$goTableBoth, options = list(pageLength = 10, scrollX = TRUE)))
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (params$includeGO && ((!is.null(params$goGseaDotplot)) || (!is.null(params$goGseaEnrichmentPlot)) || (!is.null(params$goGseaRidgeplot)) || (!is.null(params$goGseaTable)))) {
+  cat("## GO Gene Set Enrichment Analysis (GSEA)\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (!is.null(params$goGseaDotplot) && params$includeGO) {
+  cat("### GSEA Dot plot\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, fig.width=8, fig.height=6}
+if (!is.null(params$goGseaDotplot) && params$includeGO) {
+  print(params$goGseaDotplot)
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (!is.null(params$goGseaEnrichmentPlot) && params$includeGO) {
+  cat("### GSEA Enrichment plot\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, fig.width=10, fig.height=6}
+if (!is.null(params$goGseaEnrichmentPlot) && params$includeGO) {
+  print(params$goGseaEnrichmentPlot)
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (!is.null(params$goGseaRidgeplot) && params$includeGO) {
+  cat("### GSEA Ridge plot\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, fig.width=8, fig.height=8}
+if (!is.null(params$goGseaRidgeplot) && params$includeGO) {
+  print(params$goGseaRidgeplot)
+}
+```
+
+```{r echo=FALSE, eval=params$includeGO, results='asis'}
+if (!is.null(params$goGseaTable) && params$includeGO) {
+  cat("### GSEA Results table\n\n")
+  print(datatable(params$goGseaTable, options = list(pageLength = 10, scrollX = TRUE)))
+}
+```
+
+# Pathway Enrichment Analysis
+
+```{r echo=FALSE, eval=params$includePATHWAY, results='asis'}
+if (!is.null(params$enrichmentData) && params$includePATHWAY) {
+  cat("## Analysis parameters\n\n")
+  cat(sprintf("**Organism**: %s  \n", params$enrichmentData$parameters$organism))
+  cat(sprintf("**Analysis method**: %s  \n", params$enrichmentData$parameters$analysis))
+  cat(sprintf("**Database**: %s  \n", params$enrichmentData$parameters$DB))
+  cat(sprintf("**Log2FC threshold**: %s  \n", params$enrichmentData$parameters$threshold))
+  cat(sprintf("**Adjusted p-value threshold**: %s  \n", params$enrichmentData$parameters$pval))
+  cat(sprintf("**Number of enriched pathways**: %d  \n\n", length(unique(params$enrichmentData$enrichment$ID))))
+}
+```
+
+```{r echo=FALSE, eval=params$includePATHWAY, results='asis'}
+if (!is.null(params$pathwayTable) && params$includePATHWAY) {
+  cat("## Enriched pathways table\n\n")
+  print(datatable(params$pathwayTable, escape = F, options = list(pageLength = 10, scrollX = TRUE)))
+}
+```
+
+```{r echo=FALSE, eval=params$includePATHWAY, results='asis'}
+if (!is.null(params$pathwayDotPlot) && params$includePATHWAY) {
+  cat("## Dot plot\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includePATHWAY, fig.width=8, fig.height=10}
+if (!is.null(params$pathwayDotPlot) && params$includePATHWAY) {
+  print(params$pathwayDotPlot)
+}
+```
+
+```{r echo=FALSE, eval=params$includePATHWAY, results='asis'}
+if (!is.null(params$pathwayTreePlot) && params$includePATHWAY) {
+  cat("## Tree plot\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includePATHWAY, fig.width=10, fig.height=10}
+if (!is.null(params$pathwayTreePlot) && params$includePATHWAY) {
+  print(params$pathwayTreePlot)
+}
+```
+
+```{r echo=FALSE, eval=params$includePATHWAY, results='asis'}
+if (!is.null(params$pathwayCnetPlot) && params$includePATHWAY) {
+  cat("## Gene-Concept Network plot\n\n")
+}
+```
+
+```{r echo=FALSE, eval=params$includePATHWAY, fig.width=12, fig.height=8}
+if (!is.null(params$pathwayCnetPlot) && params$includePATHWAY) {
+  print(params$pathwayCnetPlot)
+}
+```
+
+```{r echo=FALSE, eval=params$includePATHWAY, results='asis'}
+if (!is.null(params$pathwayGseaPlot) && params$includepathwayGseaPlots && params$includePATHWAY) {
+  cat("## GSEA plots\n\n")
   
-  cat("### Analysis parameters\n\n")
-  cat(sprintf("**Organism**: %s\n\n", params$enrichmentData$parameters$organism))
-  cat(sprintf("**Analysis method**: %s\n\n", params$enrichmentData$parameters$analysis))
-  cat(sprintf("**Database**: %s\n\n", params$enrichmentData$parameters$DB))
-  
-  cat("### Enriched pathways\n\n")
-  kable(params$enrichmentData$enrichment, caption = "Pathway enrichment results")
+  for (i in 1:length(params$pathwayGseaPlot)) {
+    pathway_name <- params$enrichmentData$enrichment$Description[i]
+    pathway_id <- params$enrichmentData$enrichment$ID[i]
+    
+    cat(paste0("### ", pathway_name, "\n\n"))
+    cat(paste0("**ID**: ", pathway_id, "  \n\n"))
+    
+    print(params$pathwayGseaPlot[[i]])
+    cat("\n\n")
+  }
 }
 ```
 
-```{r echo=FALSE, fig.width=6, fig.height=10, results='asis'}
-if (!is.null(params$dotPlot) & params$includePATHWAY) {
-cat("### Dot plot\n")
-print(params$dotPlot)
-}
-```
-
-```{r echo=FALSE, fig.width=8, fig.height=10, results='asis'}
-if (!is.null(params$treePlot) & params$includePATHWAY) {
-cat("### Tree plot\n")
-print(params$treePlot)
-}
-```
-
-```{r echo=FALSE, fig.width=10, fig.height=6, results='asis'}
-if (!is.null(params$cnetPlot) & params$includePATHWAY) {
-cat("### CNET plot\n")
-print(params$cnetPlot)
-}
-```
-
-```{r echo=FALSE, fig.width=10, fig.height=6, results='asis'}
-if (params$includePATHWAY && (params$includeGSEAplots || params$includePathwayViews)) {
-  cat("### Pathway Analysis {.tabset .tabset-fade}\n\n")
+```{r echo=FALSE, eval=params$includePATHWAY, results='asis'}
+if (!is.null(params$pathwayViewPlots) && params$includePathwayViews && params$includePATHWAY) {
+  cat("## Pathway visualizations\n\n")
   
   data <- params$enrichmentData$enrichment
   db <- params$enrichmentData$parameters$DB
   
-  # Charger la bibliothèque grid pour les visualisations de pathways
-  if (params$includePathwayViews) {
-    library(grid)
-  }
-  
-  # Déterminer le nombre d'éléments à traiter
-  n_items <- 0
-  if (params$includeGSEAplots && !is.null(params$gseaPlot)) {
-    n_items <- length(params$gseaPlot)
-  }
-  if (params$includePathwayViews && !is.null(params$pathwayViewPlots)) {
-    n_items <- max(n_items, length(params$pathwayViewPlots))
-  }
-  
-  for (i in 1:n_items) {
-    has_gsea <- params$includeGSEAplots && !is.null(params$gseaPlot) && i <= length(params$gseaPlot)
-    has_pathway_view <- params$includePathwayViews && !is.null(params$pathwayViewPlots) && 
-                        i <= length(params$pathwayViewPlots) && !is.null(params$pathwayViewPlots[[i]])
-    
-    if (has_gsea || has_pathway_view) {
+  for (i in 1:length(params$pathwayViewPlots)) {
+    if (!is.null(params$pathwayViewPlots[[i]])) {
       # Extraction des informations du pathway
       if(db == "KEGG") {
-        pathway_name <- data$ID[i]
+        pathway_name <- data$Description[i]
         pathway_id <- data$ID[i]
       } else if(db == "Reactome") {
         pathway_name <- data$Description[i]
@@ -702,7 +973,7 @@ if (params$includePATHWAY && (params$includeGSEAplots || params$includePathwayVi
         pathway_id <- data$ID[i]
       }
       
-      # Récupération des p-valeurs et q-valeurs
+      # Récupération des p-valeurs
       p_value <- ifelse(!is.null(data$pvalue[i]),
                        sprintf("%.4e", data$pvalue[i]),
                        ifelse(!is.null(data$p.adjust[i]),
@@ -714,26 +985,15 @@ if (params$includePATHWAY && (params$includeGSEAplots || params$includePathwayVi
                               sprintf("%.4e", data$qvalues[i]),
                               "NA"))
       
-      # Créer un onglet pour chaque pathway
-      cat(paste0("#### ", pathway_name, "\n\n"))
+      cat(paste0("### ", pathway_name, "\n\n"))
       cat(paste0("**ID**: ", pathway_id, "  \n"))
       cat(paste0("**p-value**: ", p_value, "  \n"))
       cat(paste0("**q-value**: ", q_value, "  \n\n"))
       
-      # Afficher le plot GSEA si disponible
-      if (has_gsea) {
-        cat("##### GSEA Plot\n\n")
-        print(params$gseaPlot[[i]])
-        cat("\n\n")
-      }
-      
-      # Afficher la visualisation du pathway si disponible
-      if (has_pathway_view) {
-        cat("##### Pathway Visualization\n\n")
-        grid.newpage()
-        grid.raster(params$pathwayViewPlots[[i]])
-        cat("\n\n")
-      }
+      # Afficher la visualisation du pathway
+      grid.newpage()
+      grid.raster(params$pathwayViewPlots[[i]])
+      cat("\n\n")
     }
   }
 }
