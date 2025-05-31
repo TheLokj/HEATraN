@@ -10,7 +10,6 @@
 setwd("../")
 source("./bin/fun/pathway.R")
 
-
 config <- read.ini("./conf.ini")
 
 emptyTable <- data.frame(Gene=NA, Log2FC=NA, p_value=NA)
@@ -35,7 +34,14 @@ emptyPlot <- ggplot() +
 
 emptyGseaPlot <- ggplot() + 
   geom_richtext(aes(x = 0.5, y = 0.5, 
-                    label = "<b style='font-family:Mulish,sans-serif;font-size:20pt;'>Please select at least one enriched pathways</b>"), 
+                    label = "<b style='font-family:Mulish,sans-serif;font-size:20pt;'>Please select at least one enriched pathway</b>"), 
+                size = 6, color = "red3", fill = NA, label.color = NA) +
+  theme_void() +
+  theme(panel.background = element_rect(fill = "white", color = NA))
+
+emptyPathwayPlot <- ggplot() + 
+  geom_richtext(aes(x = 0.5, y = 0.5, 
+                    label = "<b style='font-family:Mulish,sans-serif;font-size:20pt;'>Please select a pathway</b>"), 
                 size = 6, color = "red3", fill = NA, label.color = NA) +
   theme_void() +
   theme(panel.background = element_rect(fill = "white", color = NA))
@@ -870,44 +876,6 @@ function(input, output, session) {
       }
   })
     
-    output$pathway <- renderUI({
-      if (!is.null(pathwayGSEAEnrichment())) {
-        if (pathwayGSEAEnrichment()$parameters$DB == "KEGG"){
-          imageOutput("pathwayKegg", height = "750px")
-        } else {
-          imageOutput("pathwayReactome", height = "750px")
-        }
-      } else {
-          plotOutput("pathwayEmpty")
-      }
-    }) |> bindEvent(input$pathway)
-    
-    output$pathwayEmpty <- renderPlot ({emptyPlot})
-    
-    output$pathwayKegg <- renderImage(deleteFile=F, {
-      message("Rendering Pathway plot")
-      if (input$pathway!="None" & pathwayGSEAEnrichment()$parameters$DB == "KEGG"){
-        list(
-          src = paste(getwd(), "/out/", input$pathway, ".png", sep=""),
-          contentType = 'image/png',
-          alt = "Image PNG",
-          height="750Px"
-        )} else {
-        }
-  })
-    
-    output$pathwayReactome <- renderImage(deleteFile=F, {
-     # message("Warning : plotting fold change only for non-duplicate gene")
-     if (input$pathway!="None" & pathwayGSEAEnrichment()$parameters$DB == "Reactome"){
-       list(
-         src = paste(getwd(), "/out/", gsub(" ", "_", input$pathway), ".png", sep=""),
-         contentType = 'image/png',
-         alt = "Image PNG",
-         height="750Px"
-       )} else {
-       }}
-      )
-    
   # -----------------------------------------
   # Save and export functions
   # -----------------------------------------
@@ -1212,11 +1180,11 @@ function(input, output, session) {
       combined_data <- rbind(ora_data, gsea_data)
       
       # Enlever les doublons basés sur l'ID du pathway
-      combined_data <- combined_data[!duplicated(combined_data$ID), ]
+      #combined_data <- combined_data[!duplicated(combined_data$ID), ]
       
       if (ora_results$parameters$DB == "KEGG") {
         choices <- setNames(combined_data$ID, 
-                            paste0(combined_data$ID, " (", combined_data$analysis_type, ")"))
+                            paste0(combined_data$Description, " (", combined_data$analysis_type, ")"))
       } else { # Reactome
         choices <- setNames(combined_data$Description, 
                             paste0(combined_data$Description, " (", combined_data$analysis_type, ")"))
@@ -1274,10 +1242,10 @@ function(input, output, session) {
     combined_results <- combinedPathwayResults()
     selected_pathway <- input$pathway
     
-    if (!is.null(combined_results) && !is.null(selected_pathway)) {
+    if (!is.null(combined_results) && selected_pathway!="") {
       
       pathway_data <- combined_results$combined_data
-      
+
       if (nrow(pathway_data) > 0) {
         if ((!is.null(combined_results$ora_results$parameters$DB) && combined_results$ora_results$parameters$DB == "KEGG")
             || (!is.null(combined_results$gsea_results$parameters$DB) && combined_results$gsea_results$parameters$DB == "KEGG")) {
@@ -1288,11 +1256,12 @@ function(input, output, session) {
         
         if (length(pathway_row) > 0) {
           analysis_type <- pathway_data$analysis_type[pathway_row[1]]
-          
+          combined_paths = c(combined_results$ora_results$pathway_images, combined_results$gsea_results$pathway_images)
+
         if (analysis_type == "ORA" && !is.null(combined_results$ora_results$pathway_images)) {
-            image_path <- combined_results$ora_results$pathway_images[[pathway_row[1]]]
+            image_path <- combined_paths[[pathway_row[1]]]
           } else if (analysis_type == "GSEA" && !is.null(combined_results$gsea_results$pathway_images)) {
-            image_path <- combined_results$gsea_results$pathway_images[[pathway_row[1]]]
+            image_path <- combined_paths[[pathway_row[1]]]
           } else {
             image_path <- NULL
           }
@@ -1307,6 +1276,11 @@ function(input, output, session) {
           }
         }
       }
+    } else if (!is.null(combined_results)) {
+      print("OK")
+      filename <- tempfile(fileext = '.png')
+      ggsave(paste0("./out/", filename), plot = emptyPathwayPlot)
+      return(list(src = paste0("./out/", filename), contentType = 'image/png', width="100%", alt="Please select a pathway"))
     }
     
     # Image par défaut si aucun pathway n'est trouvé

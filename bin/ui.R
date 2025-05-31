@@ -17,6 +17,12 @@ HEATraN_theme <- create_theme(
 fea_page <- readChar("../www/doc.html", file.info("../www/doc.html")$size)
 stat_page <- readChar("../www/stat.html", file.info("../www/stat.html")$size)
 
+
+spinner <- function(plot, type = 6, color = "#ef940b") {
+  shinycssloaders::withSpinner(plot, type = type, color = color)
+}
+
+
 # -----------------------------------------
 # Dashboard creation
 # -----------------------------------------
@@ -208,36 +214,36 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                       fluidRow(
                            box(title = HTML("Bar Plot"),
                                id = "goOraBarplot", width = 6,
-                               plotOutput("goBarplot", height = "425px")
+                               spinner(plotOutput("goBarplot", height = "425px"))
                                ),
                                box(
                                title = HTML("Dot Plot"),
                                id = "goOraDotplot", width = 6,
-                               plotOutput("goDotplot", height = "425px")
+                               spinner(plotOutput("goDotplot", height = "425px"))
                                )),
                       fluidRow(
                         box(title = HTML("Upset Plot"),
                             id = "goOraUpsetplot", width = 6,
-                            plotOutput("goUpsetplot", height = "425px")
+                            spinner(plotOutput("goUpsetplot", height = "425px"))
                         ),
                         box(
                           title = HTML("Gene-Concept Network"),
                           id = "goOraNetplot", width = 6,
-                          plotOutput("goNetplot", height = "425px")
+                          spinner(plotOutput("goNetplot", height = "425px"))
                         )),
                       
                         fluidRow(
                           box(
                             title = HTML("Results Table"),
                             id = "goOraTable", width = 12,
-                            DT::dataTableOutput("goTable")
+                            spinner(DT::dataTableOutput("goTable"))
                           )
                         ),
                       fluidRow(
                         box(
                           title = HTML("<h4><b>Hierarchical network of enriched GO terms</b></h4>"),
                           id = "goOrasigOfnodesplot", width = 12,
-                          plotOutput("gosigOfnodesplot",height = "1200px")
+                          spinner(plotOutput("gosigOfnodesplot",height = "1200px"))
                         )
                       )
                                 ),
@@ -249,23 +255,23 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                     box(
                                       title = HTML("Ridge Plot"),
                                       id = "goGseaRidgeplotBox", width = 6,
-                                      plotOutput("goGseaRidgeplot", height = "425px")
+                                      spinner(plotOutput("goGseaRidgeplot", height = "425px"))
                                     ),
                                     box(
                                       title = HTML("Dot Plot"),
                                       id = "goGseaDotplotBox", width = 6,
-                                      plotOutput("goGseaDotplot", height = "425px")
+                                      spinner(plotOutput("goGseaDotplot", height = "425px"))
                                     )
                                   ),
                                   fluidRow(
                                     box(title = HTML("Upset Plot"),
                                         id = "goGseaUpsetplot", width = 6,
-                                        plotOutput("goGseaUpsetplot", height = "425px")
+                                        spinner(plotOutput("goGseaUpsetplot", height = "425px"))
                                     ),
                                     box(
                                       title = HTML("Gene-Concept Network"),
                                       id = "goGseaNetplot", width = 6,
-                                      plotOutput("goGseaNetplot", height = "425px")
+                                      spinner(plotOutput("goGseaNetplot", height = "425px"))
                                     )),
                                   # Box conditionnelle pour les graphiques GSEA détaillés
                                   fluidRow(
@@ -277,7 +283,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                                   selected = "None", 
                                                   multiple = TRUE, 
                                                   width = "100%"),
-                                      plotOutput("goGseaPlot2", 
+                                      spinner(plotOutput("goGseaPlot2", 
                                                  height = "425px",
                                                  click = "plot_click",
                                                  dblclick = "plot_dblclick",
@@ -286,13 +292,13 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                                                    delay = 3000, 
                                                                    delayType = "debounce", 
                                                                    fill = "#7e3535", 
-                                                                   stroke = "#7e3535"))
+                                                                   stroke = "#7e3535")))
                                     )),
                                   fluidRow(
                                     box(
                                       title = HTML("Results Table"),
                                       id = "goGseaTable", width = 12,
-                                      DT::dataTableOutput("goGseaTable")
+                                      spinner(DT::dataTableOutput("goGseaTable"))
                                     )
                                   )
                         ),
@@ -325,39 +331,39 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                               # Plots spécifiques à ORA
                                               fluidRow (
                                                 box(title = "Tree plot", width = 6, height="850px",
-                                                    plotOutput("pathway_ora_treeplot")),
+                                                    spinner(plotOutput("pathway_ora_treeplot"))),
                                                 box(title = "Dot plot", width = 6, height="850px",
-                                                    plotOutput("pathway_ora_dotplot")),
+                                                    spinner(plotOutput("pathway_ora_dotplot"))),
                                                 fluidRow (height="875px",
                                                           box(title = "Upset Plot", width = 6, height="850px",
-                                                              plotOutput("pathway_ora_upsetplot")),
+                                                              spinner(plotOutput("pathway_ora_upsetplot"))),
                                                           box(title = "Gene-Concept Network", width = 6, height="850px",
-                                                              plotOutput("pathway_ora_cnetplot")),
+                                                              spinner(plotOutput("pathway_ora_cnetplot"))),
                                                 ), 
                                                 fluidRow (
                                                   box(title = "Table", width = 12, height="850px",
-                                                      DT::dataTableOutput("pathway_ora_table")))
+                                                      spinner(DT::dataTableOutput("pathway_ora_table"))))
                                               )
                                      ),
                                      tabPanel("Results (GSEA)",
                                               # Plots spécifiques à GSEA
                                                 fluidRow (
                                                   box(title = "Tree plot", width = 6, height="850px",
-                                                      plotOutput("pathway_gsea_treeplot")),
+                                                      spinner(plotOutput("pathway_gsea_treeplot"))),
                                                   box(title = "Dot plot", width = 6, height="850px",
-                                                    plotOutput("pathway_gsea_dotplot")),
+                                                      spinner(plotOutput("pathway_gsea_dotplot"))),
                                                   fluidRow (height="875px",
                                                     box(title = "Upset Plot", width = 6, height="850px",
-                                                        plotOutput("pathway_gsea_upsetplot")),
+                                                        spinner(plotOutput("pathway_gsea_upsetplot"))),
                                                     box(title = "Gene-Concept Network", width = 6, height="850px",
-                                                        plotOutput("pathway_gsea_cnetplot")),
+                                                        spinner(plotOutput("pathway_gsea_cnetplot"))),
                                                   ), 
                                                   fluidRow (
                                                     box(title = "EnrichPlot", width = 12, height="850px",
                                                         selectInput("pathwayGSEA", "Select one or more pathways:", choices = c("None"), selected = "None", multiple=TRUE),
-                                                        plotOutput("pathway_gsea_enrichplot", height = "425px")),
+                                                        spinner(plotOutput("pathway_gsea_enrichplot", height = "425px"))),
                                                     box(title = "Table", width = 12, height="850px",
-                                                        DT::dataTableOutput("pathway_gsea_table")),
+                                                        spinner(DT::dataTableOutput("pathway_gsea_table"))),
                                                   )
                                                 )
                                      ),
@@ -366,7 +372,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                                 box(width = 12,
                                                 column(12,
                                                        selectInput("pathway", "Select pathway:", choices = NULL),
-                                                       imageOutput("pathwayImage", height = "600px")
+                                                       spinner(imageOutput("pathwayImage", height = "600px"))
                                                 ))
                                               )
                                      ))),

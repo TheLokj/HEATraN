@@ -60,17 +60,14 @@ getKEGGpathway = function(geneList, pathwayID, organism, local=T){
     tryCatch({
       pathview(gene.data = geneList, pathway.id = pathwayID, species = organism, kegg.dir=".")
       
-      # Construire les noms de fichiers générés par pathview
       base_filename <- paste(pathwayID, ".pathview", sep="")
       png_file <- paste0(base_filename, ".png")
       multi_png_file <- paste0(base_filename, ".multi.png")
       
-      # Vérifier quels fichiers ont été créés et retourner les chemins
       generated_files <- c()
       if (file.exists(png_file)) {
         generated_files <- c(generated_files, file.path(wd, "out", png_file))
-      }
-      if (file.exists(multi_png_file)) {
+      } else if (file.exists(multi_png_file)) {
         generated_files <- c(generated_files, file.path(wd, "out", multi_png_file))
       }
       
