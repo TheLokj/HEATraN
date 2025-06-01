@@ -138,7 +138,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                               title = HTML("<b>Selection options</b>"), side = "right",
                               id = "tabset2", height = "500px",
                               htmlOutput("InfoSelect"),
-                              sliderInput("pval", "Maximum ajusted p-value", min = 0, max = 1, value = 0.05, round=F),
+                              sliderInput("pval", "Maximum ajusted p-value", min = 0, max = 1, value = 0.05, round=F, step=0.001),
                               sliderInput("Log2FC", "Minimum absolute log2(FoldChange)", min = 0, max = 1, value = 0),
                               actionButton("SelectAll", "Select all data", icon=icon('search', lib='glyphicon')),
                               actionButton("ResetButton", "Reset selection", icon=icon('refresh', lib='glyphicon')),
@@ -174,8 +174,8 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                              collapsible = FALSE,
                              
                              # Entrée pour la p-value et le q-value
-                             sliderInput("go_pval", "Select an adjusted p-value cutoff", 
-                                         min = 0, max = 1, value = 0.05, round = FALSE),
+                             numericInput("go_pval", "Select an adjusted p-value cutoff", 
+                                         min = 0, max = 1, value = 0.05, step=0.001),
                              numericInput("qvalueCutoff", "q-value cutoff", 
                                           min = 0, max = 1, value = 0.2, step = 0.01),
                              
@@ -315,7 +315,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                        box(
                                          title = HTML("<i>Analysis parameters</i>"),
                                          id = "GO_analysis", width = 12,
-                                         sliderInput("pvalPathway", "Select an adjusted p-value cutoff", min = 0, max = 1, value = 0.05, round=F),
+                                         numericInput("pvalPathway", "Select an adjusted p-value cutoff", min = 0, max = 1, value = 0.05, step=0.001),
                                          checkboxGroupInput("analysisMethodChoice", "Analysis method", choices = list("Over Representation Analysis (ORA)"="ORA", "Gene Set Enrichment Analysis (GSEA)"="GSEA"), selected = NULL,
                                                       inline = TRUE, width = NULL),
                                          conditionalPanel(
@@ -341,7 +341,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                                               spinner(plotOutput("pathway_ora_cnetplot"))),
                                                 ), 
                                                 fluidRow (
-                                                  box(title = "Table", width = 12, height="850px",
+                                                  box(title = "Table", width = 12,
                                                       spinner(DT::dataTableOutput("pathway_ora_table"))))
                                               )
                                      ),
@@ -361,8 +361,9 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                                   fluidRow (
                                                     box(title = "EnrichPlot", width = 12, height="850px",
                                                         selectInput("pathwayGSEA", "Select one or more pathways:", choices = c("None"), selected = "None", multiple=TRUE),
-                                                        spinner(plotOutput("pathway_gsea_enrichplot", height = "425px"))),
-                                                    box(title = "Table", width = 12, height="850px",
+                                                        spinner(plotOutput("pathway_gsea_enrichplot", height = "425px")))),
+                                                  fluidRow (
+                                                    box(title = "Table", width = 12,
                                                         spinner(DT::dataTableOutput("pathway_gsea_table"))),
                                                   )
                                                 )
@@ -378,13 +379,14 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                      ))),
                 
                   tabItem(tabName = "EXPORT",
-                                fluidRow(
-                                  box(id="export", width = 12,
-                                    uiOutput("exportOptions"),
-                                    downloadButton("exportReport", "Download report")
-                                      )
-                                  )
-                           ))
+                          fluidRow(
+                            box(id = "export", width = 12,
+                                uiOutput("exportOptions"),      
+                                uiOutput("exportSubOptions"),   
+                                downloadButton("exportReport", "Download report")
+                            )
+                          )
+                  ))
               ),
               
               #Webpage title

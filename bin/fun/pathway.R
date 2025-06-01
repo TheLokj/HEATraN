@@ -51,40 +51,65 @@ rankFC = function(data, colId){
   return(rankedVec)
 }
 
-getKEGGpathway = function(geneList, pathwayID, organism, local=T){
-  if (local){
-    wd = getwd()
-    setwd(paste(wd, "/out", sep=""))
+getKEGGpathway <- function(geneList, pathwayID, organism, local = TRUE) {
+  # On définit le répertoire de sortie
+  out_dir <- file.path(getwd(), "out")
+  if (local && !dir.exists(out_dir)) {
+    dir.create(out_dir, recursive = TRUE)
+  }
+  
+  # Noms de fichiers produits par pathview
+  base_name     <- paste0(pathwayID, ".pathview")
+  png_file      <- file.path(out_dir, paste0(base_name, ".png"))
+  multi_png_file<- file.path(out_dir, paste0(base_name, ".multi.png"))
+  
+  if (local) {
+    # 1) Vérification préalable
+    existing <- c(png_file, multi_png_file)[file.exists(c(png_file, multi_png_file))]
+    if (length(existing) > 0) {
+      message("File already exists, skipping download:", paste(existing))
+      return(existing)
+    }
     
-    # Générer l'image avec pathview
+    # 2) Pas trouvée, on génère
+    wd <- getwd()
+    setwd(out_dir)
+    on.exit(setwd(wd), add = TRUE)
+    
     tryCatch({
-      pathview(gene.data = geneList, pathway.id = pathwayID, species = organism, kegg.dir=".")
-      
-      base_filename <- paste(pathwayID, ".pathview", sep="")
-      png_file <- paste0(base_filename, ".png")
-      multi_png_file <- paste0(base_filename, ".multi.png")
-      
-      generated_files <- c()
-      if (file.exists(png_file)) {
-        generated_files <- c(generated_files, file.path(wd, "out", png_file))
-      } else if (file.exists(multi_png_file)) {
-        generated_files <- c(generated_files, file.path(wd, "out", multi_png_file))
+      pathview(
+        gene.data   = geneList,
+        pathway.id  = pathwayID,
+        species     = organism,
+        kegg.dir    = ".",
+        gene.idtype = "KEGG"
+      )
+      # on réévalue les fichiers générés
+      generated <- c()
+      if (file.exists(basename(png_file))) {
+        generated <- c(generated, png_file)
+      } 
+      if (file.exists(basename(multi_png_file))) {
+        generated <- c(generated, multi_png_file)
       }
-      
-      setwd(wd)
-      return(generated_files)
+      if (length(generated) == 0) {
+        warning("Something went wrong with generation")
+        return(NULL)
+      }
+      return(generated)
       
     }, error = function(e) {
-      setwd(wd)
-      message(paste("Erreur lors de la génération du pathway:", e$message))
+      message("Error: ", e$message)
       return(NULL)
     })
     
   } else {
+    # mode navigateur (non‐local)
     browseKEGG(geneList, pathwayID)
-    return(NULL)  # Pas de fichier généré en mode navigateur
+    return(NULL)
   }
 }
+
 
     
 getReactomePathway <- function(rankedLog2FC, pathwayIDs, pathwayDesc, organism) {
@@ -193,6 +218,7 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
     #--- Analysis ---#
     if (DB == "KEGG"){
       enrichment = enrichKEGG(genesList, organism=orgs[orgs$organism==organism, "TLname"], universe=data$entrezIds, pvalueCutoff = pval)
+      setProgress(message="Downloading pathway visualisations related to ORA enrichment...")
       pathway_images <- NULL
       if(nrow(enrichment@result) > 0) {
         pathway_images <- mapply(function(pathway_id) {
@@ -205,6 +231,7 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
     }
     if (DB == "Reactome"){
       enrichment = enrichPathway(genesList, organism=orgs[orgs$organism==organism, "commonName"], universe=data$entrezIds, pvalueCutoff = pval)
+      setProgress(message="Downloading pathway visualisations related to ORA enrichment...")
       pathway_images <- NULL
         if(nrow(enrichment@result) > 0) {
           pathway_images <- getReactomePathway(data$ranked,
@@ -229,6 +256,7 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
                                                pvalueCutoff = pval,
                                                minGSSize    = 10, #Previously 120
                                                verbose      = FALSE)
+      setProgress(message="Downloading pathway visualisations related to GSEA enrichment...")
       pathway_images <- NULL
       if(nrow(enrichment@result) > 0) {
         pathway_images <- mapply(function(pathway_id) {
@@ -245,6 +273,7 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
                                pvalueCutoff = pval,
                                minGSSize    = 10, #Previously 120
                                verbose      = FALSE)
+      setProgress(message="Downloading pathway visualisations related to GSEA enrichment...")
       pathway_images <- NULL
         if(nrow(enrichment@result) > 0) {
           pathway_images <- getReactomePathway(data$ranked,
