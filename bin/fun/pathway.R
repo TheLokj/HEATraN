@@ -202,13 +202,13 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
     #--- Preprocess ---#
     if ("up" %in% oraInterest & "down" %in% oraInterest) {
       message(paste("Analyzing DEG with a Log2FC <", threshold, " and >", threshold, ".", sep=""))
-      data = data[abs(data$Log2FC)>threshold,]}
+      data = data[abs(data$Log2FC)>log2(threshold),]}
     else if (oraInterest == "down"){
       message(paste("Analyzing DEG with a Log2FC <", threshold, ".", sep=""))
-      data = data[data$Log2FC<threshold,]}
+      data = data[data$Log2FC<log2(threshold),]}
     else if (oraInterest == "up"){
       message(paste("Analyzing DEG with a Log2FC >", threshold, ".", sep=""))
-      data = data[data$Log2FC>threshold,]}
+      data = data[data$Log2FC>log2(threshold),]}
     data <- tryCatch({preprocessPathway(data, organism, DB)}, error = function(e) {return(NULL)})
     if (is.null(data)){
       shinyalert("Database issue", text="Unrecognized ids, please check the selected species or convert your ids using an online converter.", type = "error")
@@ -217,7 +217,7 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
     genesList = names(data$ranked)[abs(data$ranked)]
     #--- Analysis ---#
     if (DB == "KEGG"){
-      enrichment = enrichKEGG(genesList, organism=orgs[orgs$organism==organism, "TLname"], universe=data$entrezIds, pvalueCutoff = pval)
+      enrichment = enrichKEGG(genesList, organism=orgs[orgs$organism==organism, "TLname"], universe=data$entrezIds, pvalueCutoff = pval, pAdjustMethod = config$STAT$adjust_method, qvalueCutoff = as.numeric(config$STAT$q_val))
       setProgress(message="Downloading pathway visualisations related to ORA enrichment...")
       pathway_images <- NULL
       if(nrow(enrichment@result) > 0) {
@@ -230,7 +230,7 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
       }
     }
     if (DB == "Reactome"){
-      enrichment = enrichPathway(genesList, organism=orgs[orgs$organism==organism, "commonName"], universe=data$entrezIds, pvalueCutoff = pval)
+      enrichment = enrichPathway(genesList, organism=orgs[orgs$organism==organism, "commonName"], universe=data$entrezIds, pvalueCutoff = pval, pAdjustMethod = config$STAT$adjust_method, qvalueCutoff = as.numeric(config$STAT$q_val))
       setProgress(message="Downloading pathway visualisations related to ORA enrichment...")
       pathway_images <- NULL
         if(nrow(enrichment@result) > 0) {
@@ -255,7 +255,7 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
       enrichment = gseKEGG(data$ranked, organism=orgs[orgs$organism==organism, "TLname"], 
                                                pvalueCutoff = pval,
                                                minGSSize    = 10, #Previously 120
-                                               verbose      = FALSE)
+                                               verbose      = FALSE, pAdjustMethod = config$STAT$adjust_method)
       setProgress(message="Downloading pathway visualisations related to GSEA enrichment...")
       pathway_images <- NULL
       if(nrow(enrichment@result) > 0) {
@@ -272,8 +272,9 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
                                organism=orgs[orgs$organism==organism, "commonName"],
                                pvalueCutoff = pval,
                                minGSSize    = 10, #Previously 120
-                               verbose      = FALSE)
-      setProgress(message="Downloading pathway visualisations related to GSEA enrichment...")
+                               verbose      = FALSE, 
+                              pAdjustMethod = config$STAT$adjust_method)
+      setProgress(message="Downloading pathway visualisations related to GSEA enrichment...",)
       pathway_images <- NULL
         if(nrow(enrichment@result) > 0) {
           pathway_images <- getReactomePathway(data$ranked,
@@ -286,52 +287,6 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
     return(list(enrichment=enrichment, processedData = data, parameters=parameters, pathway_images=pathway_images))
     }
 }
-
-#test = pathway(data, organism, DB="Reactome")
-#
-#ggplot(test$enrichment, aes(x = reorder(Description, setSize), y = setSize, fill=p.adjust)) +
-# geom_bar(stat = "identity") +
-#  coord_flip() +  # Inverser les axes pour une meilleure lisibilité
-    # labs(title = "Résultats de l'enrichissement GSEA",
-#      x = "Voies",
-       #      y = "Set size") +
-#  theme_minimal() +
-# scale_fill_gradient2(low = "royalblue", mid="royalblue", high = "red3")
-
-
-
-
-#cnetplot(
-#  x = test$enrichment, category = "Description",  gene = "core_enrichment", pvalue = "p.adjust",  foldchange = test$processedData$ranked,  # Si vous avez des fold changes, vous pouvez les inclure ici
-# pointSize = 3,
-#labelSize = 3)
-
-
-#geneSetsSignificant = test$enrichment@geneSets[names(test$enrichment@geneSets)%in%test$enrichment$ID]
-
-#geneSetsSignificant = lapply(geneSetsSignificant, as.vector)
-
-#gene_sets <- data.frame(geneSetsSignificant) %>%
-# select(geneID, Description) %>%
-# table() > 0
-
-
-#print(gsea$plot$plot)
-##print(gsea$plot$dotplot)
-#print(gsea$enrichment)
-#print(as.data.frame(gsea$enrichment))
-
-
-#Plots = function(id){
-  #--- Plotting ---#
-  # print(barplot(enrichmentORA, showCategory=20))
-  # print(dotplot(enrichmentORA, showCategory=30) + ggtitle("Dotplot for ORA"))
-  #--- Plotting ---#
-  # gseaplot = gseaplot(enrichmentGSEA, 1)
-  # gseabarplot = barplot(enrichmentGSEA, showCategory=20)
-  # gseadotplot = dotplot(enrichmentGSEA, showCategory=30) + ggtitle("dotplot for GSEA")
-  
-#}
 
 dir_size <- function(path, recursive = TRUE) {
   stopifnot(is.character(path))

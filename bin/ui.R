@@ -14,9 +14,11 @@ HEATraN_theme <- create_theme(
   )
 )
 
-fea_page <- readChar("../www/doc.html", file.info("../www/doc.html")$size)
-stat_page <- readChar("../www/stat.html", file.info("../www/stat.html")$size)
+setwd("../")
+config <- read.ini("./conf.ini")
 
+fea_page <- readChar("www/doc.html", file.info("www/doc.html")$size)
+stat_page <- readChar("www/stat.html", file.info("www/stat.html")$size)
 
 spinner <- function(plot, type = 6, color = "#ef940b") {
   shinycssloaders::withSpinner(plot, type = type, color = color)
@@ -84,7 +86,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                 
                 # Load style and theme
                 use_theme(HEATraN_theme),
-                includeCSS("../www/style.css"),
+                includeCSS("www/style.css"),
                 
                 tabItems(
                   tabItem(tabName = "HOME",
@@ -113,7 +115,18 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                   tabItem(tabName = "DOC",
                           tabsetPanel(id="doctab", 
                                       tabPanel(title="Functional Enrichment Analysis", HTML(fea_page)),
-                                      tabPanel(title="Statistics", HTML(stat_page)))
+                                      tabPanel(title="Statistics", HTML(stat_page)),
+                                      fluidRow(
+                                        box(title="Expert statistician's parameters", width=12,
+                                          HTML(""),
+                                          selectInput("ajust_method", label="Select p-value ajust method:",
+                                                      choices=c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr"),
+                                                      selected = config$STAT$adjust_method),
+                                          HTML("<br/>Each enrichment is constrained both by the adjusted p-value threshold (using the method above) and by a q-value threshold.<br/>"),
+                                          HTML("<br/>"),
+                                          numericInput("q_val", label="Select a q-value threshold", min=0, max=1, value = config$STAT$q_val, step=0.01))
+                                        ))
+                                      
                   ),
                   
                   # Whole Data Inspection tab
@@ -159,7 +172,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                   
                  
                   tabItem(
-                    tabName = "GO_analysis",
+                    tabName = "GO_analysis", h2("GO term enrichment"),
                     tabsetPanel(
                       id = "go_tabs",
                       #width = 12,
@@ -176,8 +189,6 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                              # Entrée pour la p-value et le q-value
                              numericInput("go_pval", "Select an adjusted p-value cutoff", 
                                          min = 0, max = 1, value = 0.05, step=0.001),
-                             numericInput("qvalueCutoff", "q-value cutoff", 
-                                          min = 0, max = 1, value = 0.2, step = 0.01),
                              
                              # Sélection de la méthode d'analyse
                              checkboxGroupInput("go_analysisMethodChoice", "Analysis method",
@@ -188,10 +199,12 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                              # Sélection des gènes d'intérêt pour ORA
                              conditionalPanel(
                                condition = "input.go_analysisMethodChoice.includes('Over Representation Analysis (ORA)')",
-                             checkboxGroupInput("go_oraChoice", "Interest for ORA method",
+                               sliderInput("go_oraFC", label="ORA - Minimum Absolute Fold-Change (×) to be considered over- or under-enriched", value=1, step=0.01, min=1, max=4),
+                               checkboxGroupInput("go_oraChoice", "ORA - Interest",
                                                 choices = c("Under expressed DEG", "Over expressed DEG"),
                                                 selected = NULL,
-                                                inline = TRUE)),
+                                                inline = TRUE),
+                             ),
                              
                              # Sélection de l'ontologie GO
                              selectInput("inputGO", "Select a GO annotation",
@@ -201,7 +214,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                          selected = "BP"),
                              
                              # Niveau de précision des termes GO
-                             numericInput("goLevel", "GO level of precision (from 1 to 7)", 
+                             numericInput("goLevel", "GO level of precision | 1 (general) to 7 (ultra-specific)", 
                                           min = 1, max = 7, value = 1),
                              
                              # Bouton pour démarrer l'analyse
@@ -216,22 +229,27 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                id = "goOraBarplot", width = 6,
                                spinner(plotOutput("goBarplot", height = "425px"))
                                ),
-                               box(
-                               title = HTML("Dot Plot"),
-                               id = "goOraDotplot", width = 6,
-                               spinner(plotOutput("goDotplot", height = "425px"))
-                               )),
+                           box(
+                           title = HTML("Dot Plot"),
+                           id = "goOraDotplot", width = 6,
+                           spinner(plotOutput("goDotplot", height = "425px"))
+                           )),
+                        fluidRow(
+                          box(
+                            title = HTML("Gene–Concept Network (microscopic view)"),
+                            id = "goOraNetplot", width = 6,
+                            spinner(plotOutput("goNetplot", height = "425px"))
+                          ),
+                          box(
+                            title = HTML("Enrichment Map (macroscopic overview)"),
+                            id = "goOraEmapPlot", width = 6,
+                            spinner(plotOutput("goEmapPlot", height = "425px"))
+                          )),
                       fluidRow(
                         box(title = HTML("Upset Plot"),
-                            id = "goOraUpsetplot", width = 6,
+                            id = "goOraUpsetplot", width = 12,
                             spinner(plotOutput("goUpsetplot", height = "425px"))
-                        ),
-                        box(
-                          title = HTML("Gene-Concept Network"),
-                          id = "goOraNetplot", width = 6,
-                          spinner(plotOutput("goNetplot", height = "425px"))
                         )),
-                      
                         fluidRow(
                           box(
                             title = HTML("Results Table"),
@@ -241,7 +259,7 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                         ),
                       fluidRow(
                         box(
-                          title = HTML("<h4><b>Hierarchical network of enriched GO terms</b></h4>"),
+                          title = HTML("Hierarchical network of enriched GO terms"),
                           id = "goOrasigOfnodesplot", width = 12,
                           spinner(plotOutput("gosigOfnodesplot",height = "1200px"))
                         )
@@ -264,15 +282,21 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                     )
                                   ),
                                   fluidRow(
-                                    box(title = HTML("Upset Plot"),
-                                        id = "goGseaUpsetplot", width = 6,
-                                        spinner(plotOutput("goGseaUpsetplot", height = "425px"))
-                                    ),
                                     box(
-                                      title = HTML("Gene-Concept Network"),
+                                      title = HTML("Gene–Concept Network (microscopic view)"),
                                       id = "goGseaNetplot", width = 6,
                                       spinner(plotOutput("goGseaNetplot", height = "425px"))
+                                    ),
+                                    box(
+                                      title = HTML("Enrichment Map (macroscopic overview)"),
+                                      id = "goGseaEmapplot", width = 6,
+                                      spinner(plotOutput("goGseaEmapPlot", height = "425px"))
                                     )),
+                                  fluidRow(
+                                    box(title = HTML("Upset Plot"),
+                                       id = "goGseaUpsetplot", width = 12,
+                                       spinner(plotOutput("goGseaUpsetplot", height = "425px"))
+                                  )),
                                   # Box conditionnelle pour les graphiques GSEA détaillés
                                   fluidRow(
                                     box(
@@ -320,8 +344,10 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                                       inline = TRUE, width = NULL),
                                          conditionalPanel(
                                            condition = "input.analysisMethodChoice.includes('ORA')",
-                                          checkboxGroupInput("oraChoice", "Interest for ORA method", choices = list("Under expressed DEG"="down", "Over expressed DEG"="up"), selected = NULL,
+                                           sliderInput("pathway_oraFC", label="ORA - Minimum Absolute Fold-Change (×) to be considered over- or under-enriched", value=1, step=0.01, min=1, max=4),
+                                          checkboxGroupInput("oraChoice", "ORA - Interest", choices = list("Under expressed DEG"="down", "Over expressed DEG"="up"), selected = NULL,
                                                             inline = TRUE, width = NULL)),
+                                          
                                          radioButtons("dbPathwaychoice", "Database choice", choices = c("Reactome", "KEGG"), selected = NULL,
                                                       inline = TRUE, width = NULL),
                                          actionButton("analysisPathwayButton", "Start analysis", icon=icon('transfer', lib='glyphicon'))
@@ -334,12 +360,14 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                                     spinner(plotOutput("pathway_ora_treeplot"))),
                                                 box(title = "Dot plot", width = 6, height="850px",
                                                     spinner(plotOutput("pathway_ora_dotplot"))),
-                                                fluidRow (height="875px",
-                                                          box(title = "Upset Plot", width = 6, height="850px",
-                                                              spinner(plotOutput("pathway_ora_upsetplot"))),
-                                                          box(title = "Gene-Concept Network", width = 6, height="850px",
-                                                              spinner(plotOutput("pathway_ora_cnetplot"))),
-                                                ), 
+                                                fluidRow(height="875px",
+                                                         box(title = "Gene–Concept Network (microscopic view)", width = 6, height="850px",
+                                                             spinner(plotOutput("pathway_ora_cnetplot"))),
+                                                          box(title = "Enrichment Map (macroscopic overview)", width = 6, height="850px",
+                                                              spinner(plotOutput("pathway_ora_emapplot")))),
+                                                fluidRow(height="875px",
+                                                          box(title = "Upset Plot", width = 12, height="850px",
+                                                              spinner(plotOutput("pathway_ora_upsetplot")))),
                                                 fluidRow (
                                                   box(title = "Table", width = 12,
                                                       spinner(DT::dataTableOutput("pathway_ora_table"))))
@@ -351,13 +379,15 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                                   box(title = "Tree plot", width = 6, height="850px",
                                                       spinner(plotOutput("pathway_gsea_treeplot"))),
                                                   box(title = "Dot plot", width = 6, height="850px",
-                                                      spinner(plotOutput("pathway_gsea_dotplot"))),
-                                                  fluidRow (height="875px",
-                                                    box(title = "Upset Plot", width = 6, height="850px",
-                                                        spinner(plotOutput("pathway_gsea_upsetplot"))),
-                                                    box(title = "Gene-Concept Network", width = 6, height="850px",
-                                                        spinner(plotOutput("pathway_gsea_cnetplot"))),
-                                                  ), 
+                                                      spinner(plotOutput("pathway_gsea_dotplot")))),
+                                                  fluidRow(height="875px",
+                                                           box(title = "Gene–Concept Network (microscopic view)", width = 6, height="850px",
+                                                               spinner(plotOutput("pathway_gsea_cnetplot"))),
+                                                           box(title = "Enrichment Map (macroscopic overview)", width = 6, height="850px",
+                                                               spinner(plotOutput("pathway_gsea_emapplot")))),
+                                                fluidRow(height="875px",
+                                                       box(title = "Upset Plot", width = 12, height="850px",
+                                                           spinner(plotOutput("pathway_gsea_upsetplot")))),
                                                   fluidRow (
                                                     box(title = "EnrichPlot", width = 12, height="850px",
                                                         selectInput("pathwayGSEA", "Select one or more pathways:", choices = c("None"), selected = "None", multiple=TRUE),
@@ -366,7 +396,6 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                                     box(title = "Table", width = 12,
                                                         spinner(DT::dataTableOutput("pathway_gsea_table"))),
                                                   )
-                                                )
                                      ),
                                      tabPanel("View Pathway",
                                               fluidRow(
@@ -380,10 +409,12 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                 
                   tabItem(tabName = "EXPORT",
                           fluidRow(
-                            box(id = "export", width = 12,
+                            box(id = "export",  title="Export results", width = 12,
                                 uiOutput("exportOptions"),      
-                                uiOutput("exportSubOptions"),   
-                                downloadButton("exportReport", "Download report")
+                                conditionalPanel(
+                                    condition = "'GO GSEA' == input.export_choices || 'Pathway GSEA' == input.export_choices || input.export_choices.includes('Pathway GSEA') || input.export_choices.includes('GO GSEA')",
+                                    checkboxInput("includeGSEAPlots", "Include all GSEA enrichplots", value = TRUE)
+                                  ) 
                             )
                           )
                   ))
