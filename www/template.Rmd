@@ -732,14 +732,14 @@ if (!is.null(params$goGseaResults) && isTRUE(params$includeGSEAPlots) && ("GO GS
     data <- params$goGseaResults
     n_terms <- nrow(data@result)
     for (i in seq_len(n_terms)) {
-    id <- data@result$ID[i]
-    desc <- data@result$Description[i]
-    cat("### Enriched GO Term: ", id, " – ", desc, "\n\n")
-    # tracé GSEA du terme i
-    plt <- enrichplot::gseaplot2(data, geneSetID = i, pvalue_table = FALSE)
-    print(plt)
-    cat("\n\n")
-  }
+      id <- data@result$ID[i]
+      desc <- data@result$Description[i]
+      cat("### Enriched GO Term: ", id, " – ", desc, "\n\n")
+      # tracé GSEA du terme i
+      plt <- enrichplot::gseaplot2(data, geneSetID = i, pvalue_table = FALSE)
+      print(plt)
+      cat("\n\n")
+    }
 }
 ```
 
@@ -796,6 +796,7 @@ if ("Pathway GSEA" %in% params$export_choices) {
   if (!is.null(params$pathwayGSEAEnrichment)) {
     if (isTRUE(params$includeGSEAPlots)) {
     cat("## Static visualisation – (GSEA)\n\n")
+    gsea_res = params$pathwayGSEAEnrichment$enrichment
     for (i in seq_len(nrow(gsea_res))) {
       id   <- gsea_res$ID[i]
       desc <- gsea_res$Description[i]

@@ -24,7 +24,8 @@ library(shinydashboardPlus)
 library(GOSemSim)
 library(topGO)
 library(GO.db)
-#library(UpSetR)
+library(plyr)
 
-shinyAppDir("bin/")
+
+shinyAppDir("./bin/")
 

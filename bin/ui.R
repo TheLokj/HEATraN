@@ -14,26 +14,22 @@ HEATraN_theme <- create_theme(
   )
 )
 
-setwd("../")
-config <- read.ini("./conf.ini")
-
-fea_page <- readChar("www/doc.html", file.info("www/doc.html")$size)
-stat_page <- readChar("www/stat.html", file.info("www/stat.html")$size)
+fea_page <- readChar("../www/doc.html", file.info("../www/doc.html")$size)
+stat_page <- readChar("../www/stat.html", file.info("../www/stat.html")$size)
 
 spinner <- function(plot, type = 6, color = "#ef940b") {
   shinycssloaders::withSpinner(plot, type = type, color = color)
 }
 
-
 # -----------------------------------------
 # Dashboard creation
 # -----------------------------------------
-dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-size:26px; color:#ebb233; font-weight:900'>HEATraN</b>")), 
+dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-size:26px; color:#ebb233; font-weight:900'>HEATraN</b>")), 
               
               # -----------------------------------------
               # Sidebar elements
               # -----------------------------------------
-              sidebar <- dashboardSidebar(
+              sidebar = dashboardSidebar(
                 
                 sidebarMenu(menuItem("Home", tabName = "HOME", icon = icon("home"))),
                 
@@ -82,11 +78,11 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
               # -----------------------------------------
               # Body tabs 
               # -----------------------------------------
-              body <- dashboardBody( 
+              body = dashboardBody( 
                 
                 # Load style and theme
                 use_theme(HEATraN_theme),
-                includeCSS("www/style.css"),
+                includeCSS("../www/style.css"),
                 
                 tabItems(
                   tabItem(tabName = "HOME",
@@ -121,12 +117,11 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                                           HTML(""),
                                           selectInput("ajust_method", label="Select p-value ajust method:",
                                                       choices=c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr"),
-                                                      selected = config$STAT$adjust_method),
+                                                      selected = read.ini("../conf.ini")$STAT$adjust_method),
                                           HTML("<br/>Each enrichment is constrained both by the adjusted p-value threshold (using the method above) and by a q-value threshold.<br/>"),
                                           HTML("<br/>"),
-                                          numericInput("q_val", label="Select a q-value threshold", min=0, max=1, value = config$STAT$q_val, step=0.01))
+                                          numericInput("q_val", label="Select a q-value threshold", min=0, max=1, value = read.ini("../conf.ini")$STAT$q_val, step=0.01))
                                         ))
-                                      
                   ),
                   
                   # Whole Data Inspection tab
@@ -412,9 +407,10 @@ dashboardPage(skin="red", header <- dashboardHeader(title= HTML("<b style='font-
                             box(id = "export",  title="Export results", width = 12,
                                 uiOutput("exportOptions"),      
                                 conditionalPanel(
-                                    condition = "'GO GSEA' == input.export_choices || 'Pathway GSEA' == input.export_choices || input.export_choices.includes('Pathway GSEA') || input.export_choices.includes('GO GSEA')",
-                                    checkboxInput("includeGSEAPlots", "Include all GSEA enrichplots", value = TRUE)
-                                  ) 
+                                  condition = "input.export_choices && ((Array.isArray(input.export_choices) && (input.export_choices.includes('GO GSEA') || input.export_choices.includes('Pathway GSEA'))) || input.export_choices == 'GO GSEA' || input.export_choices == 'Pathway GSEA')",
+                                  checkboxInput("includeGSEAPlots", "Include all GSEA enrichplots",value = TRUE)
+                                )
+                                
                             )
                           )
                   ))

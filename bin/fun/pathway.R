@@ -15,13 +15,6 @@ library(DOSE)
 library(enrichplot)
 library(dplyr)
 
-# Global variables definition
-#GeneID = read.table("~/Bureau/Fac/Rshiny/HEATraN/data/exemple.csv", sep=";", h=T)$GeneID
-#Log2FC = read.table("~/Bureau/Fac/Rshiny/HEATraN/data/exemple.csv", sep=";", h=T)$Log2FC
-#organism = "Mus musculus"
-#data = as.data.frame(cbind(GeneID, Log2FC))
-#data$Log2FC = as.numeric(data$Log2FC)
-
 # Organism dataframe
 orgs = data.frame(organism="Homo sapiens", db="org.Hs.eg.db", commonName="human", TLname="hsa")
 orgs = rbind(orgs, data.frame(organism="Mus musculus", db="org.Mm.eg.db", commonName="mouse", TLname="mmu"))
@@ -195,19 +188,19 @@ preprocessPathway = function(data, organism, DB){
   }
 }
 
-pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", threshold=1, oraInterest = c("up", "down"), pval= 0.05){
+pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", threshold=0, oraInterest = c("up", "down"), pval= 0.05){
   parameters = list(organism=organism, DB=DB, analysis=analysis, pAdjustMethod=pAdjustMethod, threshold=threshold, oraInterest=oraInterest, pval=pval)
   if (analysis == "ORA"){
     message("Doing an over representation analysis on differentially expressed genes regarding their pathway.")
     #--- Preprocess ---#
     if ("up" %in% oraInterest & "down" %in% oraInterest) {
-      message(paste("Analyzing DEG with a Log2FC <", threshold, " and >", threshold, ".", sep=""))
+      message(paste("Analyzing DEG with a Log2FC <", log2(threshold), " and >", log2(threshold), ".", sep=""))
       data = data[abs(data$Log2FC)>log2(threshold),]}
     else if (oraInterest == "down"){
-      message(paste("Analyzing DEG with a Log2FC <", threshold, ".", sep=""))
+      message(paste("Analyzing DEG with a Log2FC <", log2(threshold), ".", sep=""))
       data = data[data$Log2FC<log2(threshold),]}
     else if (oraInterest == "up"){
-      message(paste("Analyzing DEG with a Log2FC >", threshold, ".", sep=""))
+      message(paste("Analyzing DEG with a Log2FC >", log2(threshold), ".", sep=""))
       data = data[data$Log2FC>log2(threshold),]}
     data <- tryCatch({preprocessPathway(data, organism, DB)}, error = function(e) {return(NULL)})
     if (is.null(data)){
@@ -217,7 +210,7 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
     genesList = names(data$ranked)[abs(data$ranked)]
     #--- Analysis ---#
     if (DB == "KEGG"){
-      enrichment = enrichKEGG(genesList, organism=orgs[orgs$organism==organism, "TLname"], universe=data$entrezIds, pvalueCutoff = pval, pAdjustMethod = config$STAT$adjust_method, qvalueCutoff = as.numeric(config$STAT$q_val))
+      enrichment = enrichKEGG(genesList, organism=orgs[orgs$organism==organism, "TLname"], universe=data$entrezIds, pvalueCutoff = pval, pAdjustMethod = read.ini("./conf.ini")$STAT$adjust_method, qvalueCutoff = as.numeric(read.ini("./conf.ini")$STAT$q_val))
       setProgress(message="Downloading pathway visualisations related to ORA enrichment...")
       pathway_images <- NULL
       if(nrow(enrichment@result) > 0) {
@@ -230,7 +223,7 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
       }
     }
     if (DB == "Reactome"){
-      enrichment = enrichPathway(genesList, organism=orgs[orgs$organism==organism, "commonName"], universe=data$entrezIds, pvalueCutoff = pval, pAdjustMethod = config$STAT$adjust_method, qvalueCutoff = as.numeric(config$STAT$q_val))
+      enrichment = enrichPathway(genesList, organism=orgs[orgs$organism==organism, "commonName"], universe=data$entrezIds, pvalueCutoff = pval, pAdjustMethod = read.ini("./conf.ini")$STAT$adjust_method, qvalueCutoff = as.numeric(read.ini("./conf.ini")$STAT$q_val))
       setProgress(message="Downloading pathway visualisations related to ORA enrichment...")
       pathway_images <- NULL
         if(nrow(enrichment@result) > 0) {
@@ -254,8 +247,9 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
     if (DB == "KEGG"){
       enrichment = gseKEGG(data$ranked, organism=orgs[orgs$organism==organism, "TLname"], 
                                                pvalueCutoff = pval,
-                                               minGSSize    = 10, #Previously 120
-                                               verbose      = FALSE, pAdjustMethod = config$STAT$adjust_method)
+                                               minGSSize    = 10,
+                                               verbose      = FALSE, 
+                           pAdjustMethod = read.ini("./conf.ini")$STAT$adjust_method)
       setProgress(message="Downloading pathway visualisations related to GSEA enrichment...")
       pathway_images <- NULL
       if(nrow(enrichment@result) > 0) {
@@ -273,8 +267,8 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
                                pvalueCutoff = pval,
                                minGSSize    = 10, #Previously 120
                                verbose      = FALSE, 
-                              pAdjustMethod = config$STAT$adjust_method)
-      setProgress(message="Downloading pathway visualisations related to GSEA enrichment...",)
+                              pAdjustMethod = read.ini("./conf.ini")$STAT$adjust_method)
+      setProgress(message="Downloading pathway visualisations related to GSEA enrichment...")
       pathway_images <- NULL
         if(nrow(enrichment@result) > 0) {
           pathway_images <- getReactomePathway(data$ranked,
@@ -283,7 +277,6 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
                                                organism=orgs[orgs$organism==organism, "commonName"])
         }
     }
-    
     return(list(enrichment=enrichment, processedData = data, parameters=parameters, pathway_images=pathway_images))
     }
 }

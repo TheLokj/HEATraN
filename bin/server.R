@@ -7,7 +7,11 @@
 # Last updated : 13/05/2025
 # HEATraN version 0.3.0
 
+setwd("../")
+source("./bin/fun/pathway.R")
+
 config <- read.ini("./conf.ini")
+
 app_palette = colorRampPalette(c("#ef940b", "#7e3535"))
 options(enrichplot.colours = c("#ef940b", "#7e3535"))
 
@@ -695,12 +699,12 @@ function(input, output, session) {
                 analysis   = "ORA",
                 oraInterest= input$oraChoice,
                 pval       = input$pvalPathway,
-                threshold = log2(input$pathway_oraFC)
+                threshold = input$pathway_oraFC
               )
-              
               # 2. Test whether any enriched terms were returned
-              if (nrow(res$enrichment) == 0) {
+              if (is.null(res) || (is.null(res$enrichment)) ||  nrow(res$enrichment@result) == 0) {
                 # 3a. No enriched terms: set to NULL
+                shinyalert("No results for ORA", text="Check your significance and fold-change threshold, which may be too restrictive.", type = "error")
                 pathwayORAEnrichment(NULL)
               } else {
                 # 3b. Enriched terms found: pass result and show tab
@@ -721,7 +725,8 @@ function(input, output, session) {
                 pval       = input$pvalPathway
               )
               
-              if (nrow(res$enrichment) == 0) {
+              if (is.null(res) || (is.null(res$enrichment)) ||  nrow(res$enrichment@result) == 0) {
+                shinyalert("No results for GSEA", text="Check your significance threshold, which may be too restrictive.", type = "error")
                 pathwayGSEAEnrichment(NULL)
               } else {
                 pathwayGSEAEnrichment(res)
