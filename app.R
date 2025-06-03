@@ -1,9 +1,11 @@
-# Developed by LESAGE Louison (@thelokj).
+# Developed by DAHER Rayan, NAIT EL DJOUDI Lamia & LESAGE Louison (@thelokj).
+# rayan.daher@univ-rouen.fr
+# lamia.nait-el-djoudi@univ-rouen.fr
 # louison.lesage@univ-rouen.fr
-# Student at Rouen Normandy University
-# University project 2024-2025
-# Last updated : 13/11/2024
-# HEATraN version 0.2.0-a.5
+# Students at Rouen Normandy University
+# Master of Bioinformatics, class M2.2 BIMS 2026 
+# Last updated : 03/06/2025
+# HEATraN version 1.0.0
 
 library(shiny)
 library(shinydashboard) 
@@ -25,7 +27,12 @@ library(GOSemSim)
 library(topGO)
 library(GO.db)
 library(plyr)
-
+library(clusterProfiler)
+library(ReactomePA)
+library(pathview)
+library(DOSE)
+library(enrichplot)
+library(dplyr)
 
 shinyAppDir("./bin/")
 

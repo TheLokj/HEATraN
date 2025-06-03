@@ -39,6 +39,8 @@ RUN R -e "install.packages(c( \
     'DT', \
     'ini', \
     'plyr', \
+    'ggridges', \
+    'ggupset', \
     'fs', \
     'knitr' \
   ), repos='https://cloud.r-project.org/')"

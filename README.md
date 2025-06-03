@@ -97,7 +97,9 @@ If one of these packages does not install, make sure that all the required softw
 
 ```
 HEATraN/
-├── app.R                # Main script                
+├── app.R                # Main script
+├── dockerfile           # Docker file to build Docker
+├── config.ini           # Configuration file
 ├── bin/                 # Directory containing main scripts
 │   ├── server.R         # Shiny Server script
 │   ├── ui.R             # Shiny UI script
@@ -107,6 +109,7 @@ HEATraN/
 │   └── example.tsv      # Differentially expressed results example file
 └── www/                 # Additional graphics resources directory
     ├── logo.png         # HEATraN logo 
+    ├── template.Rmd     # Template for report export
     ├── doc.HTML         # Documentation n°1 
     ├── stat.HTML        # Documentation n°2
     └── style.css        # HEATraN custom CSS stylesheet

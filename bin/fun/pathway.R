@@ -4,16 +4,9 @@
 # louison.lesage@univ-rouen.fr
 # Students at Rouen Normandy University
 # Master of Bioinformatics, class M2.2 BIMS 2026 
-# Last updated : 08/05/2025
-# HEATraN version 0.3.0
+# Last updated : 03/06/2025
+# HEATraN version 1.0.0
 options(clusterProfiler.download.method = "wget")
-
-library(clusterProfiler)
-library(ReactomePA)
-library(pathview)
-library(DOSE)
-library(enrichplot)
-library(dplyr)
 
 # Organism dataframe
 orgs = data.frame(organism="Homo sapiens", db="org.Hs.eg.db", commonName="human", TLname="hsa")
@@ -45,26 +38,22 @@ rankFC = function(data, colId){
 }
 
 getKEGGpathway <- function(geneList, pathwayID, organism, local = TRUE) {
-  # On définit le répertoire de sortie
   out_dir <- file.path(getwd(), "out")
   if (local && !dir.exists(out_dir)) {
     dir.create(out_dir, recursive = TRUE)
   }
   
-  # Noms de fichiers produits par pathview
   base_name     <- paste0(pathwayID, ".pathview")
   png_file      <- file.path(out_dir, paste0(base_name, ".png"))
   multi_png_file<- file.path(out_dir, paste0(base_name, ".multi.png"))
   
   if (local) {
-    # 1) Vérification préalable
     existing <- c(png_file, multi_png_file)[file.exists(c(png_file, multi_png_file))]
     if (length(existing) > 0) {
       message("File already exists, skipping download:", paste(existing))
       return(existing)
     }
     
-    # 2) Pas trouvée, on génère
     wd <- getwd()
     setwd(out_dir)
     on.exit(setwd(wd), add = TRUE)
@@ -77,7 +66,6 @@ getKEGGpathway <- function(geneList, pathwayID, organism, local = TRUE) {
         kegg.dir    = ".",
         gene.idtype = "KEGG"
       )
-      # on réévalue les fichiers générés
       generated <- c()
       if (file.exists(basename(png_file))) {
         generated <- c(generated, png_file)
@@ -97,14 +85,11 @@ getKEGGpathway <- function(geneList, pathwayID, organism, local = TRUE) {
     })
     
   } else {
-    # mode navigateur (non‐local)
     browseKEGG(geneList, pathwayID)
     return(NULL)
   }
 }
 
-
-    
 getReactomePathway <- function(rankedLog2FC, pathwayIDs, pathwayDesc, organism) {
   if (!dir.exists("./out/")) {
     dir.create("./out/", recursive = TRUE)
@@ -121,14 +106,12 @@ getReactomePathway <- function(rankedLog2FC, pathwayIDs, pathwayDesc, organism) 
     
     message(sprintf("Processing pathway: %s (%s)", pathway_name, pathway_id))
     
-    # Si le fichier existe déjà, on le réutilise et on passe au suivant
     if (file.exists(file_name)) {
       message(sprintf("File already exists, skipping download: %s", file_name))
       pathway_images[[i]] <- file_name
       next
     }
     
-    # Tentative de téléchargement via l'API Reactome
     tryCatch({
       api_url <- paste0(
         "https://reactome.org/ContentService/exporter/diagram/",
@@ -169,7 +152,6 @@ getReactomePathway <- function(rankedLog2FC, pathwayIDs, pathwayDesc, organism) 
   
   return(pathway_images)
 }
-
 
 preprocessPathway = function(data, organism, DB){
   entrezIds = bitr(data$GeneID, fromType = "ENSEMBL", toType = "ENTREZID", OrgDb = orgs[orgs$organism==organism, "db"], drop=T)
@@ -214,6 +196,7 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
       setProgress(message="Downloading pathway visualisations related to ORA enrichment...")
       pathway_images <- NULL
       if(nrow(enrichment@result) > 0) {
+        print(enrichment@result)
         pathway_images <- mapply(function(pathway_id) {
           getKEGGpathway(enrichment@result[enrichment@result$ID == pathway_id, "geneID"], 
                          pathway_id, 

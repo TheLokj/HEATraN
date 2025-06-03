@@ -4,8 +4,8 @@
 # louison.lesage@univ-rouen.fr
 # Students at Rouen Normandy University
 # Master of Bioinformatics, class M2.2 BIMS 2026 
-# Last updated : 13/05/2025
-# HEATraN version 0.3.0
+# Last updated : 03/06/2025
+# HEATraN version 1.0.0
 
 setwd("../")
 source("./bin/fun/pathway.R")
@@ -210,7 +210,6 @@ function(input, output, session) {
       if (!is.null(pathwayGSEAEnrichment())) {
         data = pathwayGSEAEnrichment()$enrichment
         result_df <- data@result
-        result_df[result_df$p.adjust <= input$qval, ]
         data@result <- result_df
         plot = dotplot(data, showCategory=30) + ggtitle("Dotplot" )  
         return(plot)
@@ -251,7 +250,6 @@ function(input, output, session) {
       if (!is.null(pathwayORAEnrichment())) {
         data = pathwayORAEnrichment()$enrichment
         result_df <- data@result
-        result_df[result_df$p.adjust <= input$qval, ]
         data@result <- result_df
         plot = dotplot(data, showCategory=30) + ggtitle("Dotplot" )  
         return(plot)
@@ -330,24 +328,19 @@ function(input, output, session) {
     })
     
     pathwayGSEATreePlot <- reactive({
-      
-      # 1) on récupère la liste
       res <- pathwayGSEAEnrichment()
       if (is.null(res)) {
         return(emptyPlot)
       }
       
-      # 2) on extrait le tableau et le vecteur foldChange
-      enr    <- res$enrichment     # data.frame des pathways
-      geneList <- res$geneList     # named numeric vector
+      enr <- res$enrichment     
+      geneList <- res$geneList     
       
-      # 3) on compte le nombre de termes
       n_leaf <- nrow(enr)
       if (n_leaf <= 1) {
         return(tooSmallTreePlot)
       }
       
-      # 4) préparation du pairwise_termsim
       dataR <- pairwise_termsim(
         setReadable(
           enr,
@@ -355,19 +348,19 @@ function(input, output, session) {
           keyType = "ENTREZID"
         )
       )
-      
-      # 5) ajustement dynamique de k
       k_dyn <- n_leaf - 1
-      # si vous voulez plafonner, par ex. à max 5 clusters :
-      # k_dyn <- min(n_leaf - 1, 5)
       
-      # 6) on trace
-      treeplot(
-        dataR,
-        foldChange = geneList,
-        k          = k_dyn
-      )
+      tryCatch({
+        treeplot(
+          dataR,
+          foldChange = geneList,
+          k = k_dyn
+        )
+      }, error = function(e) {
+        return(tooSmallTreePlot)  
+      })
     })
+    
     
     
     pathwayGSEACnetPlot <- reactive({
@@ -554,7 +547,7 @@ function(input, output, session) {
   observeEvent(input$go_analysisButton, {
     req(preprocessedData())
     
-    withProgress(message = 'Running GO analysis...', {
+    withProgress(message = 'Computing GO enrichment...', {
       df <- preprocessedData()
       
       # List of genes for the universe
@@ -571,14 +564,14 @@ function(input, output, session) {
       up_genes <- names(genes)[genes > log2(input$go_oraFC)]
       down_genes <- names(genes)[genes < -log2(input$go_oraFC)]
       
-      # Selecting the GO ontology and organism
+      # Selecting GO ontology and organism
       ontology <- input$inputGO
       go_organism <- orgs[orgs$organism==input$species, "db"]
       universe <- names(gene_list)
       library(go_organism, character.only = T)
       
       if ("Gene Set Enrichment Analysis (GSEA)" %in% input$go_analysisMethodChoice) {
-        setProgress(message("Computing GSEA enrichment..."), value=0.5)
+        setProgress(message("Computing GSEA enrichment for GO term..."), value=0.5)
         gene_list <- df$Log2FC
         names(gene_list) <- df$GeneID
         gene_list <- sort(na.omit(gene_list), decreasing = T)
@@ -597,7 +590,7 @@ function(input, output, session) {
       } 
       
       if ("Over Representation Analysis (ORA)" %in% input$go_analysisMethodChoice) {
-        setProgress(message("Computing ORA enrichment..."), value=0.75)
+        setProgress(message("Computing ORA enrichment for GO term..."), value=0.75)
         analyze_up <- "Over expressed DEG" %in% input$go_oraChoice
         analyze_down <- "Under expressed DEG" %in% input$go_oraChoice
         
@@ -606,22 +599,20 @@ function(input, output, session) {
           return(NULL)
         }
         
-        # Déterminer quels gènes analyser selon la sélection
         if (analyze_up && analyze_down) {
-          # Les deux : utiliser l'union des gènes up et down
+          # Both
           genes_to_analyze <- union(up_genes, down_genes)
           analysis_type <- "both"
         } else if (analyze_up) {
-          # Seulement up-regulated
+          # Only up-regulated
           genes_to_analyze <- up_genes
           analysis_type <- "up"
         } else {
-          # Seulement down-regulated
+          # Only down-regulated
           genes_to_analyze <- down_genes
           analysis_type <- "down"
         }
         
-        # Effectuer une seule analyse au lieu de trois
         if (length(genes_to_analyze) > 0) {
           result_go <- tryCatch({enrichGO(
             gene = genes_to_analyze,
@@ -685,11 +676,11 @@ function(input, output, session) {
         shinyalert("Incomplete selection!", "You should select an interest for ORA method", type = "error", confirmButtonCol = "#7e3535")
       }
       else {
-        withProgress(message = "Pathway enrichment...", {
-            message("Starting Pathway Enrichment...")
+        withProgress(message = "Computing Pathway enrichment...", {
+            message("Computing Pathway enrichment...")
             df = as.data.frame(preprocessedData())
             if ("ORA" %in% input$analysisMethodChoice) {
-              setProgress(message = "Computing ORA enrichment...")
+              setProgress(message = "Computing ORA enrichment for Pathway...")
               
               # 1. Run enrichment and store in a temp var
               res <- pathway(
@@ -702,7 +693,7 @@ function(input, output, session) {
                 threshold = input$pathway_oraFC
               )
               # 2. Test whether any enriched terms were returned
-              if (is.null(res) || (is.null(res$enrichment)) ||  nrow(res$enrichment@result) == 0) {
+              if (is.null(res) || (is.null(res$enrichment)) || nrow(res$enrichment@result) == 0) {
                 # 3a. No enriched terms: set to NULL
                 shinyalert("No results for ORA", text="Check your significance and fold-change threshold, which may be too restrictive.", type = "error")
                 pathwayORAEnrichment(NULL)
@@ -714,7 +705,7 @@ function(input, output, session) {
             }
             
             if ("GSEA" %in% input$analysisMethodChoice) {
-              setProgress(message = "Computing GSEA enrichment...")
+              setProgress(message = "Computing GSEA enrichment for Pathway...")
               
               res <- pathway(
                 df,
@@ -744,6 +735,18 @@ function(input, output, session) {
         updateSelectInput(session ,"pathwayGSEA", choices = setNames(1:length(data$Description), data$Description))
         }
     }) 
+    
+    observeEvent(combinedPathwayResults(), {
+      combined_results <- combinedPathwayResults()
+      
+      if (!is.null(combined_results)) {
+        showTab(inputId = "pathway_tabs", target = "View Pathway", session = session)
+        
+        updateSelectInput(session, "pathway", 
+                          choices = combined_results$choices,
+                          selected = names(combined_results$choices)[1])
+      }
+    })
   
   # -----------------------------------------
   # UI output 
@@ -809,7 +812,7 @@ function(input, output, session) {
   })
   
   output$goEmapPlot <- renderPlot({
-    if (!(is.null(goGseaResults()))) {
+    if (!(is.null(goOraResults()))) {
       go_enrich <- pairwise_termsim(goOraResults()$result)
       emapplot(go_enrich, layout = "kk", showCategory = 15)
     } else { emptyPlot }
@@ -822,7 +825,7 @@ function(input, output, session) {
         df$ID[i] = paste('<a href="https://www.ebi.ac.uk/QuickGO/term/', df$ID[i], '" target="_blank">', df$ID[i], '</a>', sep="")
       }
       if (nrow(df) != 0) {
-        datatable(df, escape = F)
+        datatable(df, escape = F, options = list(scrollX = TRUE, autoWidth = TRUE))
       }
       else {
         emptyTableGo}
@@ -885,7 +888,7 @@ function(input, output, session) {
         df$ID[i] = paste('<a href="https://www.ebi.ac.uk/QuickGO/term/', df$ID[i], '" target="_blank">', df$ID[i], '</a>', sep="")
       }
       if (nrow(df) != 0) {
-        datatable(df, escape = F)
+        datatable(df, escape = F, options = list(scrollX = TRUE, autoWidth = TRUE))
       }
       else {
         emptyTableGo
@@ -897,7 +900,7 @@ function(input, output, session) {
   
   output$gosigOfnodesplot <- renderPlot({
     if (!is.null(sigGO())) {
-    showSigOfNodes(sigGO(), score(sigGOresult()), firstSigNodes = 3)
+      showSigOfNodes(sigGO(), score(sigGOresult()), firstSigNodes = input$goLevel, useInfo = "def")
     } else {
       emptyPlot
     }
@@ -918,7 +921,7 @@ function(input, output, session) {
           }
         }
         if (nrow(df) != 0) {
-          datatable(df, escape = F)
+          datatable(df, escape = F, options = list(scrollX = TRUE, autoWidth = TRUE))
         }
         else {
           emptyTable2}
@@ -940,7 +943,7 @@ function(input, output, session) {
           }
         }
         if (nrow(df) != 0) {
-          datatable(df, escape = F)
+          datatable(df, escape = F, options = list(scrollX = TRUE, autoWidth = TRUE))
         }
         else {
           emptyTable2}
@@ -1038,20 +1041,132 @@ function(input, output, session) {
       }
   })
     
+    combinedPathwayResults <- reactive({
+      ora_results <- pathwayORAEnrichment()
+      gsea_results <- pathwayGSEAEnrichment()
+      
+      common_cols <- c("ID", "Description", "pvalue", "p.adjust")
+      
+      if (!is.null(ora_results) && !is.null(gsea_results)) {
+        
+        ora_data <- ora_results$enrichment@result[, common_cols, drop = FALSE]
+        gsea_data <- gsea_results$enrichment@result[, common_cols, drop = FALSE]
+        
+        ora_data$analysis_type <- "ORA"
+        gsea_data$analysis_type <- "GSEA"
+        
+        combined_data <- rbind(ora_data, gsea_data)
+        
+        if (ora_results$parameters$DB == "KEGG") {
+          choices <- setNames(combined_data$ID, 
+                              paste0(combined_data$Description, " (", combined_data$analysis_type, ")"))
+        } else { 
+          choices <- setNames(combined_data$Description, 
+                              paste0(combined_data$Description, " (", combined_data$analysis_type, ")"))
+        }
+        
+        return(list(
+          choices = choices,
+          combined_data = combined_data,
+          ora_results = ora_results,
+          gsea_results = gsea_results
+        ))
+        
+      } else if (!is.null(ora_results)) {
+        ora_data <- ora_results$enrichment@result[, common_cols, drop = FALSE]
+        ora_data$analysis_type <- "ORA"
+        
+        if (ora_results$parameters$DB == "KEGG") {
+          choices <- setNames(ora_data$ID, paste0(ora_data$Description, " (ORA)"))
+        } else {
+          choices <- setNames(ora_data$Description, paste0(ora_data$Description, " (ORA)"))
+        }
+        
+        return(list(
+          choices = choices,
+          combined_data = ora_data,
+          ora_results = ora_results,
+          gsea_results = NULL
+        ))
+        
+      } else if (!is.null(gsea_results)) {
+        gsea_data <- gsea_results$enrichment@result[, common_cols, drop = FALSE]
+        gsea_data$analysis_type <- "GSEA"
+        
+        if (gsea_results$parameters$DB == "KEGG") {
+          choices <- setNames(gsea_data$ID, paste0(gsea_data$Description, " (GSEA)"))
+        } else {
+          choices <- setNames(gsea_data$Description, paste0(gsea_data$Description, " (GSEA)"))
+        }
+        
+        return(list(
+          choices = choices,
+          combined_data = gsea_data,
+          ora_results = NULL,
+          gsea_results = gsea_results
+        ))
+      }
+      
+      return(NULL)
+    })
+    
+    output$pathwayImage <- renderImage({
+      combined_results <- combinedPathwayResults()
+      selected_pathway <- input$pathway
+      
+      if (!is.null(combined_results) && selected_pathway!="") {
+        
+        pathway_data <- combined_results$combined_data
+        
+        if (nrow(pathway_data) > 0) {
+          if ((!is.null(combined_results$ora_results$parameters$DB) && combined_results$ora_results$parameters$DB == "KEGG")
+              || (!is.null(combined_results$gsea_results$parameters$DB) && combined_results$gsea_results$parameters$DB == "KEGG")) {
+            pathway_row <- which(pathway_data$ID == selected_pathway)
+          } else {
+            pathway_row <- which(pathway_data$Description == selected_pathway)
+          }
+          
+          if (length(pathway_row) > 0) {
+            analysis_type <- pathway_data$analysis_type[pathway_row[1]]
+            combined_paths = c(combined_results$ora_results$pathway_images, combined_results$gsea_results$pathway_images)
+            
+            if (analysis_type == "ORA" && !is.null(combined_results$ora_results$pathway_images)) {
+              image_path <- combined_paths[[pathway_row[1]]]
+            } else if (analysis_type == "GSEA" && !is.null(combined_results$gsea_results$pathway_images)) {
+              image_path <- combined_paths[[pathway_row[1]]]
+            } else {
+              image_path <- NULL
+            }
+            
+            if (!is.null(image_path) && file.exists(image_path)) {
+              return(list(src = image_path,
+                          contentType = "image/png",
+                          width = "100%",
+                          alt = paste("Pathway:", selected_pathway, "(", analysis_type, ")")))
+            } else {
+              print(image_path)
+            }
+          }
+        }
+      } else if (!is.null(combined_results)) {
+        ggsave("./out/empty.png", plot = emptyPathwayPlot)
+        return(list(src = "./out/empty.png", contentType = 'image/png', width="100%", alt="Please select a pathway"))
+      }
+      
+      return(list(src = "", alt = "No pathway image available"))
+    }, deleteFile = FALSE)
+    
   # -----------------------------------------
   # Save and export functions
   # -----------------------------------------
 
     output$exportOptions <- renderUI({
-      
-      # 1) Condition générale : on n'affiche l'UI que si on a bien des données
       if ((!is.null(preprocessedData()) && !is.na(preprocessedData()[1,1])) 
           || (!is.null(goOraResults()$result)) 
           || (!is.null(goGseaResults()))
           || (!is.null(pathwayORAEnrichment())) 
           || (!is.null(pathwayGSEAEnrichment()))) {
         
-        # 2) Construction du vecteur choices
         choices <- character(0)
         if (!is.null(preprocessedData()) && !is.na(preprocessedData()[1,1])) {
           choices <- "Whole Data Inspection (VolcanoPlot + Table)"
@@ -1060,282 +1175,267 @@ function(input, output, session) {
         if (!is.null(goGseaResults()))          choices <- c(choices, "GO GSEA")
         if (!is.null(pathwayORAEnrichment()))   choices <- c(choices, "Pathway ORA")
         if (!is.null(pathwayGSEAEnrichment()))  choices <- c(choices, "Pathway GSEA")
-        
-        # 3) Construction dynamique de la liste d'éléments à afficher
+      
         ui_elems <- list()
         
         if (length(choices) == 1 && choices == "Whole Data Inspection (VolcanoPlot + Table)") {
-          # Cas où on n'a QUE la Whole Data Inspection
           ui_elems <- tagList(
             ui_elems,
             HTML("<em>No enrichment was carried out. 
               The current export will only contain Whole Data Inspection.</em><br/>")
           )
         } else {
-          # Cas général où on affiche les checkboxes
           ui_elems <- tagList(
             ui_elems,
             checkboxGroupInput("export_choices", "Analysis to export:", choices = choices)
           )
         }
-        
-        # 4) On ajoute toujours le bouton de téléchargement
+
         ui_elems <- tagList(
           ui_elems,
           downloadButton("exportReport", "Download report")
         )
-        
-        # 5) On retourne la totalité
         ui_elems
         
       } else {
-        # Pas de données : message informatif
         HTML("<em>Only already-launched analyses can be exported.</em><br/>")
       }
     })
 
-    
-    
     output$exportReport <- downloadHandler(
       filename = function() {
         paste0("HEATraN_results_", Sys.Date(), ".html")
       },
       content = function(file) {
-        tempReport <- file.path(tempdir(), "template.Rmd")
-        file.copy("www/template.Rmd", tempReport, overwrite = TRUE)
-        
-        # Rendre le document R Markdown
-        rmarkdown::render(
-          input = tempReport,
-          output_file = file,
-          params = list(
-            # General parameters
-            nGenes = ifelse(!is.null(input$nGenesExport), input$nGenesExport, 20),
-            organismInfo = input$species,
-            
-            # Basic outputs - Capture des objets réactifs
-            InfoSelect = tryCatch({
-              if (!is.null(preprocessedData()) && !is.na(preprocessedData()[1,1])) {
-                if (is.null(input$plot_brush)) {
-                  paste("Current selection - p-value: [0 ; ", input$pval,"] log2(FoldChange): [-", input$Log2FC, " ; ", input$Log2FC,"]", sep="")
-                } else {
-                  paste("Current selection - p-value: [", format(exp(-input$plot_brush$ymax), scientific=T, digits=3), " ; " , format(exp(-input$plot_brush$ymin), scientific=T, digits=3),"] log2(FoldChange): [", round(input$plot_brush$xmin, 3), " ; ", round(input$plot_brush$xmax, 3),"]", sep="")
-                }
-              } else NULL
-            }, error = function(e) NULL),
-            
-            volcanoPlot = tryCatch({
-              if (!is.null(preprocessedData()) && !is.na(preprocessedData()[1,1])) {
-                p <- plot()  
-                p  
-              } else NULL
-            }, error = function(e) NULL),
-            
-            table = tryCatch({
-              if (!is.null(preprocessedData()) && !is.na(preprocessedData()[1,1])) {
-                data <- processedData()
-                if (!is.null(data) && nrow(data) > 0) {
-                  data[data$selected == TRUE, -c("selected", "minuslog10")]
+        withProgress(message = 'Generating report...', value = 0, {
+          tempReport <- file.path(tempdir(), "template.Rmd")
+          file.copy("www/template.Rmd", tempReport, overwrite = TRUE)
+          
+          rmarkdown::render(
+            input = tempReport,
+            output_file = file,
+            params = list(
+              # General parameters
+              nGenes = ifelse(!is.null(input$nGenesExport), input$nGenesExport, 20),
+              organismInfo = input$species,
+              
+              InfoSelect = tryCatch({
+                if (!is.null(preprocessedData()) && !is.na(preprocessedData()[1,1])) {
+                  if (is.null(input$plot_brush)) {
+                    paste("Current selection - p-value: [0 ; ", input$pval,"] log2(FoldChange): [-", input$Log2FC, " ; ", input$Log2FC,"]", sep="")
+                  } else {
+                    paste("Current selection - p-value: [", format(exp(-input$plot_brush$ymax), scientific=T, digits=3), " ; " , format(exp(-input$plot_brush$ymin), scientific=T, digits=3),"] log2(FoldChange): [", round(input$plot_brush$xmin, 3), " ; ", round(input$plot_brush$xmax, 3),"]", sep="")
+                  }
                 } else NULL
-              } else NULL
-            }, error = function(e) NULL),
-            
-            # GO ORA outputs - Capture des fonctions réactives
-            goBarplot = tryCatch({
-              if (!is.null(goOraResults()) && !is.null(goOraResults()$result)) {
-                barplot(goOraResults()$result)
-              } else NULL
-            }, error = function(e) NULL),
-            
-            goDotplot = tryCatch({
-              if (!is.null(goOraResults()) && !is.null(goOraResults()$result)) {
-                dotplot(goOraResults()$result)
-              } else NULL
-            }, error = function(e) NULL),
-            
-            goEmapPlot = tryCatch({
-              if (!is.null(goOraResults()) && !is.null(goOraResults()$result)) {
-                go_enrich <- pairwise_termsim(goOraResults()$result)
-                emapplot(go_enrich, layout = "kk", showCategory = 15)
-              } else NULL
-            }, error = function(e) NULL),
-            
-            goNetplot = tryCatch({
-              if (!is.null(goOraResults()) && !is.null(goOraResults()$result)) {
-                go_enrich <- pairwise_termsim(goOraResults()$result)
-                cnetplot(go_enrich, layout = "kk", showCategory = 15)
-              } else NULL
-            }, error = function(e) NULL),
-            
-            goTable = tryCatch({
-              if (!is.null(goOraResults()) && !is.null(goOraResults()$result)) {
-                as.data.frame(goOraResults()$result)
-              } else NULL
-            }, error = function(e) NULL),
-            
-            goUpsetplot = tryCatch({
-              if (!is.null(goOraResults()) && !is.null(goOraResults()$result)) {
-                upsetplot(goOraResults()$result)
-              } else NULL
-            }, error = function(e) NULL),
-            
-            gosigOfnodesplot = tryCatch({
-              if (!is.null(sigGO()) && !is.null(sigGOresult())) {
-                img_file <- tempfile(fileext = ".png")
-                png(filename = img_file, width = 800, height = 600)
-                showSigOfNodes(sigGO(), score(sigGOresult()), firstSigNodes = 3)
-                dev.off()
-                list(src = img_file, contentType = "image/png", width = "100%")
-              } else {
+              }, error = function(e) NULL),
+              
+              volcanoPlot = tryCatch({
+                if (!is.null(preprocessedData()) && !is.na(preprocessedData()[1,1])) {
+                  p <- plot()  
+                  p  
+                } else NULL
+              }, error = function(e) NULL),
+              
+              table = tryCatch({
+                if (!is.null(preprocessedData()) && !is.na(preprocessedData()[1,1])) {
+                  data <- processedData()
+                  if (!is.null(data) && nrow(data) > 0) {
+                    data[data$selected == TRUE, -c("selected", "minuslog10")]
+                  } else NULL
+                } else NULL
+              }, error = function(e) NULL),
+              
+              # GO ORA outputs - Capture des fonctions réactives
+              goBarplot = tryCatch({
+                if (!is.null(goOraResults()) && !is.null(goOraResults()$result)) {
+                  barplot(goOraResults()$result)
+                } else NULL
+              }, error = function(e) NULL),
+              
+              goDotplot = tryCatch({
+                if (!is.null(goOraResults()) && !is.null(goOraResults()$result)) {
+                  dotplot(goOraResults()$result)
+                } else NULL
+              }, error = function(e) NULL),
+              
+              goEmapPlot = tryCatch({
+                if (!is.null(goOraResults()) && !is.null(goOraResults()$result)) {
+                  go_enrich <- pairwise_termsim(goOraResults()$result)
+                  emapplot(go_enrich, layout = "kk", showCategory = 15)
+                } else NULL
+              }, error = function(e) NULL),
+              
+              goNetplot = tryCatch({
+                if (!is.null(goOraResults()) && !is.null(goOraResults()$result)) {
+                  go_enrich <- pairwise_termsim(goOraResults()$result)
+                  cnetplot(go_enrich, layout = "kk", showCategory = 15)
+                } else NULL
+              }, error = function(e) NULL),
+              
+              goTable = tryCatch({
+                if (!is.null(goOraResults()) && !is.null(goOraResults()$result)) {
+                  as.data.frame(goOraResults()$result)
+                } else NULL
+              }, error = function(e) NULL),
+              
+              goUpsetplot = tryCatch({
+                if (!is.null(goOraResults()) && !is.null(goOraResults()$result)) {
+                  upsetplot(goOraResults()$result)
+                } else NULL
+              }, error = function(e) NULL),
+              
+              gosigOfnodesplot = tryCatch({
+                if (!is.null(sigGO()) && !is.null(sigGOresult())) {
+                  img_file <- tempfile(fileext = ".png")
+                  png(filename = img_file, width = 800, height = 600)
+                  showSigOfNodes(sigGO(), score(sigGOresult()), firstSigNodes = 3)
+                  dev.off()
+                  list(src = img_file, contentType = "image/png", width = "100%")
+                } else {
+                  NULL
+                }
+              }, error = function(e) {
                 NULL
-              }
-            }, error = function(e) {
-              NULL
-            }),
-            
-            # GO GSEA outputs
-            goGseaUpsetplot = tryCatch({
-              if (!is.null(goGseaResults())) {
-                upsetplot(goGseaResults())
-              } else NULL
-            }, error = function(e) NULL),
-            
-            goGseaNetplot = tryCatch({
-              if (!is.null(goGseaResults())) {
-                go_enrich <- pairwise_termsim(goGseaResults())
-                cnetplot(go_enrich, layout = "kk", showCategory = 15)
-              } else NULL
-            }, error = function(e) NULL),
-            
-            goGseaEmapPlot = tryCatch({
-              if (!is.null(goGseaResults())) {
-                go_enrich <- pairwise_termsim(goGseaResults())
-                emapplot(go_enrich, layout = "kk", showCategory = 15)
-              } else NULL
-            }, error = function(e) NULL),
-            
-            goGseaDotplot = tryCatch({
-              if (!is.null(goGseaResults())) {
-                dotplot(goGseaResults())
-              } else NULL
-            }, error = function(e) NULL),
-            
-            goGseaRidgeplot = tryCatch({
-              if (!is.null(goGseaResults())) {
-                ridgeplot(goGseaResults(), showCategory = 13)
-              } else NULL
-            }, error = function(e) NULL),
-            
-            goGseaTable = tryCatch({
-              if (!is.null(goGseaResults())) {
-                as.data.frame(goGseaResults())
-              } else NULL
-            }, error = function(e) NULL),
-            
-            # Pathway ORA outputs
-            pathway_ora_table = tryCatch({
-              if (!is.null(pathwayORAEnrichment())) {
-                as.data.frame(pathwayORAEnrichment()$enrichment)
-              } else NULL
-            }, error = function(e) NULL),
-            
-            pathway_ora_upsetplot = tryCatch({
-              if (!is.null(pathwayORAEnrichment())) {
-                p <- pathwayORAUpsetPlot()
-                p
-              } else NULL
-            }, error = function(e) NULL),
-            
-            pathway_ora_emapplot = tryCatch({
-              if (!is.null(pathwayORAEmapPlot())) {
-                p <- pathwayORAEmapPlot()
-                p
-              } else NULL
-            }, error = function(e) NULL),
-            
-            pathway_ora_dotplot = tryCatch({
-              if (!is.null(pathwayORAEnrichment())) {
-                p <- pathwayORADotPlot()
-                p
-              } else NULL
-            }, error = function(e) NULL),
-            
-            pathway_ora_treeplot = tryCatch({
-              if (!is.null(pathwayORAEnrichment())) {
-                p <- pathwayORATreePlot()
-                p
-              } else NULL
-            }, error = function(e) NULL),
-            
-            pathway_ora_cnetplot = tryCatch({
-              if (!is.null(pathwayORAEnrichment())) {
-                p <- pathwayORACnetPlot()
-                p
-              } else NULL
-            }, error = function(e) NULL),
-            
-            # Pathway GSEA outputs
-            pathway_gsea_table = tryCatch({
-              if (!is.null(pathwayGSEAEnrichment())) {
-                as.data.frame(pathwayGSEAEnrichment()$enrichment)
-              } else NULL
-            }, error = function(e) NULL),
-            
-            pathway_gsea_upsetplot = tryCatch({
-              if (!is.null(pathwayGSEAEnrichment())) {
-                p <- pathwayGseaUpsetPlot()
-                p
-              } else NULL
-            }, error = function(e) NULL),
-            
-            pathway_gsea_dotplot = tryCatch({
-              if (!is.null(pathwayGSEAEnrichment())) {
-                p <- pathwayGSEADotPlot()
-                p
-              } else NULL
-            }, error = function(e) NULL),
-            
-            pathway_gsea_treeplot = tryCatch({
-              if (!is.null(pathwayGSEAEnrichment())) {
-                p <- pathwayGSEATreePlot()
-                p
-              } else NULL
-            }, error = function(e) NULL),
-            
-            pathway_gsea_cnetplot = tryCatch({
-              if (!is.null(pathwayGSEAEnrichment())) {
-                p <- pathwayGSEACnetPlot()
-                p
-              } else NULL
-            }, error = function(e) NULL),
-            
-            pathway_gsea_emapplot = tryCatch({
-              if (!is.null(pathwayGSEAEmapPlot())) {
-                p <- pathwayGSEAEmapPlot()
-                p
-              } else NULL
-            }, error = function(e) NULL),
-            
-            # Complex data objects pour génération de plots individuels
-            goOraResults = goOraResults(),
-            goGseaResults = goGseaResults(),
-            pathwayGSEAEnrichment = pathwayGSEAEnrichment(),
-            pathwayORAEnrichment = pathwayORAEnrichment(),
-            preprocessedData = preprocessedData(),
-            processedData = processedData(),
-            export_choices     = input$export_choices,
-            includeGSEAPlots   = input$includeGSEAPlots
-            
-            # Export sections flags
-            #exportSections = input$exportSections
-          ),
-          knit_root_dir = normalizePath(getwd()),
-          envir = new.env(parent = globalenv())
-        )
+              }),
+              
+              # GO GSEA outputs
+              goGseaUpsetplot = tryCatch({
+                if (!is.null(goGseaResults())) {
+                  upsetplot(goGseaResults())
+                } else NULL
+              }, error = function(e) NULL),
+              
+              goGseaNetplot = tryCatch({
+                if (!is.null(goGseaResults())) {
+                  go_enrich <- pairwise_termsim(goGseaResults())
+                  cnetplot(go_enrich, layout = "kk", showCategory = 15)
+                } else NULL
+              }, error = function(e) NULL),
+              
+              goGseaEmapPlot = tryCatch({
+                if (!is.null(goGseaResults())) {
+                  go_enrich <- pairwise_termsim(goGseaResults())
+                  emapplot(go_enrich, layout = "kk", showCategory = 15)
+                } else NULL
+              }, error = function(e) NULL),
+              
+              goGseaDotplot = tryCatch({
+                if (!is.null(goGseaResults())) {
+                  dotplot(goGseaResults())
+                } else NULL
+              }, error = function(e) NULL),
+              
+              goGseaRidgeplot = tryCatch({
+                if (!is.null(goGseaResults())) {
+                  ridgeplot(goGseaResults(), showCategory = 13)
+                } else NULL
+              }, error = function(e) NULL),
+              
+              goGseaTable = tryCatch({
+                if (!is.null(goGseaResults())) {
+                  as.data.frame(goGseaResults())
+                } else NULL
+              }, error = function(e) NULL),
+              
+              # Pathway ORA outputs
+              pathway_ora_table = tryCatch({
+                if (!is.null(pathwayORAEnrichment())) {
+                  as.data.frame(pathwayORAEnrichment()$enrichment)
+                } else NULL
+              }, error = function(e) NULL),
+              
+              pathway_ora_upsetplot = tryCatch({
+                if (!is.null(pathwayORAEnrichment())) {
+                  p <- pathwayORAUpsetPlot()
+                  p
+                } else NULL
+              }, error = function(e) NULL),
+              
+              pathway_ora_emapplot = tryCatch({
+                if (!is.null(pathwayORAEmapPlot())) {
+                  p <- pathwayORAEmapPlot()
+                  p
+                } else NULL
+              }, error = function(e) NULL),
+              
+              pathway_ora_dotplot = tryCatch({
+                if (!is.null(pathwayORAEnrichment())) {
+                  p <- pathwayORADotPlot()
+                  p
+                } else NULL
+              }, error = function(e) NULL),
+              
+              pathway_ora_treeplot = tryCatch({
+                if (!is.null(pathwayORAEnrichment())) {
+                  p <- pathwayORATreePlot()
+                  p
+                } else NULL
+              }, error = function(e) NULL),
+              
+              pathway_ora_cnetplot = tryCatch({
+                if (!is.null(pathwayORAEnrichment())) {
+                  p <- pathwayORACnetPlot()
+                  p
+                } else NULL
+              }, error = function(e) NULL),
+              
+              # Pathway GSEA outputs
+              pathway_gsea_table = tryCatch({
+                if (!is.null(pathwayGSEAEnrichment())) {
+                  as.data.frame(pathwayGSEAEnrichment()$enrichment)
+                } else NULL
+              }, error = function(e) NULL),
+              
+              pathway_gsea_upsetplot = tryCatch({
+                if (!is.null(pathwayGSEAEnrichment())) {
+                  p <- pathwayGseaUpsetPlot()
+                  p
+                } else NULL
+              }, error = function(e) NULL),
+              
+              pathway_gsea_dotplot = tryCatch({
+                if (!is.null(pathwayGSEAEnrichment())) {
+                  p <- pathwayGSEADotPlot()
+                  p
+                } else NULL
+              }, error = function(e) NULL),
+              
+              pathway_gsea_treeplot = tryCatch({
+                if (!is.null(pathwayGSEAEnrichment())) {
+                  p <- pathwayGSEATreePlot()
+                  p
+                } else NULL
+              }, error = function(e) NULL),
+              
+              pathway_gsea_cnetplot = tryCatch({
+                if (!is.null(pathwayGSEAEnrichment())) {
+                  p <- pathwayGSEACnetPlot()
+                  p
+                } else NULL
+              }, error = function(e) NULL),
+              
+              pathway_gsea_emapplot = tryCatch({
+                if (!is.null(pathwayGSEAEmapPlot())) {
+                  p <- pathwayGSEAEmapPlot()
+                  p
+                } else NULL
+              }, error = function(e) NULL),
+              
+              goOraResults = goOraResults(),
+              goGseaResults = goGseaResults(),
+              pathwayGSEAEnrichment = pathwayGSEAEnrichment(),
+              pathwayORAEnrichment = pathwayORAEnrichment(),
+              preprocessedData = preprocessedData(),
+              processedData = processedData(),
+              export_choices     = input$export_choices,
+              includeGSEAPlots   = input$includeGSEAPlots
+            ),
+            knit_root_dir = normalizePath(getwd()),
+            envir = new.env(parent = globalenv())
+          )
+        })
       })
     
-  
-  # Functions launched when the application is closed
   onStop(function() {
     if (config$FILE$clear_cache == "True") {
       if ((dir_size("./out") / (1024^2)) > config$FILE$max_cache_mb) {
@@ -1346,145 +1446,6 @@ function(input, output, session) {
     }
     message("Thanks for using HEATraN!")
   })
-  
-  combinedPathwayResults <- reactive({
-    ora_results <- pathwayORAEnrichment()
-    gsea_results <- pathwayGSEAEnrichment()
-    
-    common_cols <- c("ID", "Description", "pvalue", "p.adjust")
-    
-    # Si les deux analyses sont disponibles
-    if (!is.null(ora_results) && !is.null(gsea_results)) {
-      
-      ora_data <- ora_results$enrichment@result[, common_cols, drop = FALSE]
-      gsea_data <- gsea_results$enrichment@result[, common_cols, drop = FALSE]
-      
-      # Ajouter une colonne pour identifier le type d'analyse
-      ora_data$analysis_type <- "ORA"
-      gsea_data$analysis_type <- "GSEA"
-      
-      combined_data <- rbind(ora_data, gsea_data)
-      
-      # Enlever les doublons basés sur l'ID du pathway
-      #combined_data <- combined_data[!duplicated(combined_data$ID), ]
-      
-      if (ora_results$parameters$DB == "KEGG") {
-        choices <- setNames(combined_data$ID, 
-                            paste0(combined_data$Description, " (", combined_data$analysis_type, ")"))
-      } else { # Reactome
-        choices <- setNames(combined_data$Description, 
-                            paste0(combined_data$Description, " (", combined_data$analysis_type, ")"))
-      }
-      
-      return(list(
-        choices = choices,
-        combined_data = combined_data,
-        ora_results = ora_results,
-        gsea_results = gsea_results
-      ))
-      
-    } else if (!is.null(ora_results)) {
-      # Seulement ORA disponible
-      ora_data <- ora_results$enrichment@result[, common_cols, drop = FALSE]
-      ora_data$analysis_type <- "ORA"
-      
-      if (ora_results$parameters$DB == "KEGG") {
-        choices <- setNames(ora_data$ID, paste0(ora_data$Description, " (ORA)"))
-      } else {
-        choices <- setNames(ora_data$Description, paste0(ora_data$Description, " (ORA)"))
-      }
-      
-      return(list(
-        choices = choices,
-        combined_data = ora_data,
-        ora_results = ora_results,
-        gsea_results = NULL
-      ))
-      
-    } else if (!is.null(gsea_results)) {
-      # Seulement GSEA disponible
-      gsea_data <- gsea_results$enrichment@result[, common_cols, drop = FALSE]
-      gsea_data$analysis_type <- "GSEA"
-      
-      if (gsea_results$parameters$DB == "KEGG") {
-        choices <- setNames(gsea_data$ID, paste0(gsea_data$Description, " (GSEA)"))
-      } else {
-        choices <- setNames(gsea_data$Description, paste0(gsea_data$Description, " (GSEA)"))
-      }
-      
-      return(list(
-        choices = choices,
-        combined_data = gsea_data,
-        ora_results = NULL,
-        gsea_results = gsea_results
-      ))
-    }
-    
-    return(NULL)
-  })
-  
-  # Mettre à jour les choix de pathways
-  output$pathwayImage <- renderImage({
-    combined_results <- combinedPathwayResults()
-    selected_pathway <- input$pathway
-    
-    if (!is.null(combined_results) && selected_pathway!="") {
-      
-      pathway_data <- combined_results$combined_data
-
-      if (nrow(pathway_data) > 0) {
-        if ((!is.null(combined_results$ora_results$parameters$DB) && combined_results$ora_results$parameters$DB == "KEGG")
-            || (!is.null(combined_results$gsea_results$parameters$DB) && combined_results$gsea_results$parameters$DB == "KEGG")) {
-          pathway_row <- which(pathway_data$ID == selected_pathway)
-        } else {
-          pathway_row <- which(pathway_data$Description == selected_pathway)
-        }
-        
-        if (length(pathway_row) > 0) {
-          analysis_type <- pathway_data$analysis_type[pathway_row[1]]
-          combined_paths = c(combined_results$ora_results$pathway_images, combined_results$gsea_results$pathway_images)
-
-        if (analysis_type == "ORA" && !is.null(combined_results$ora_results$pathway_images)) {
-            image_path <- combined_paths[[pathway_row[1]]]
-          } else if (analysis_type == "GSEA" && !is.null(combined_results$gsea_results$pathway_images)) {
-            image_path <- combined_paths[[pathway_row[1]]]
-          } else {
-            image_path <- NULL
-          }
-          
-          if (!is.null(image_path) && file.exists(image_path)) {
-            return(list(src = image_path,
-                        contentType = "image/png",
-                        width = "100%",
-                        alt = paste("Pathway:", selected_pathway, "(", analysis_type, ")")))
-          } else {
-            print(image_path)
-          }
-        }
-      }
-    } else if (!is.null(combined_results)) {
-      ggsave("./out/empty.png", plot = emptyPathwayPlot)
-      return(list(src = "./out/empty.png", contentType = 'image/png', width="100%", alt="Please select a pathway"))
-    }
-    
-    # Image par défaut si aucun pathway n'est trouvé
-    return(list(src = "", alt = "No pathway image available"))
-  }, deleteFile = FALSE)
-  
-  observeEvent(combinedPathwayResults(), {
-    combined_results <- combinedPathwayResults()
-    
-    if (!is.null(combined_results)) {
-      # Afficher l'onglet "View Pathway"
-      showTab(inputId = "pathway_tabs", target = "View Pathway", session = session)
-      
-      # Mettre à jour les choix
-      updateSelectInput(session, "pathway", 
-                        choices = combined_results$choices,
-                        selected = names(combined_results$choices)[1])
-    }
-  })
-  
 
 }
 

@@ -111,7 +111,7 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                   tabItem(tabName = "DOC",
                           tabsetPanel(id="doctab", 
                                       tabPanel(title="Functional Enrichment Analysis", HTML(fea_page)),
-                                      tabPanel(title="Statistics", HTML(stat_page)),
+                                      tabPanel(title="Statistics", HTML(stat_page),
                                       fluidRow(
                                         box(title="Expert statistician's parameters", width=12,
                                           HTML(""),
@@ -121,7 +121,7 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                                           HTML("<br/>Each enrichment is constrained both by the adjusted p-value threshold (using the method above) and by a q-value threshold.<br/>"),
                                           HTML("<br/>"),
                                           numericInput("q_val", label="Select a q-value threshold", min=0, max=1, value = read.ini("../conf.ini")$STAT$q_val, step=0.01))
-                                        ))
+                                        )))
                   ),
                   
                   # Whole Data Inspection tab
@@ -350,7 +350,7 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                                      )),
                                      tabPanel("Results (ORA)",
                                               # Plots spécifiques à ORA
-                                              fluidRow (
+                                              fluidRow (height="875px",
                                                 box(title = "Tree plot", width = 6, height="850px",
                                                     spinner(plotOutput("pathway_ora_treeplot"))),
                                                 box(title = "Dot plot", width = 6, height="850px",
@@ -369,7 +369,6 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                                               )
                                      ),
                                      tabPanel("Results (GSEA)",
-                                              # Plots spécifiques à GSEA
                                                 fluidRow (
                                                   box(title = "Tree plot", width = 6, height="850px",
                                                       spinner(plotOutput("pathway_gsea_treeplot"))),
