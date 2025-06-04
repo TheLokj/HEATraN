@@ -4,7 +4,7 @@
 # louison.lesage@univ-rouen.fr
 # Students at Rouen Normandy University
 # Master of Bioinformatics, class M2.2 BIMS 2026 
-# Last updated : 03/06/2025
+# Last updated : 04/06/2025
 # HEATraN version 1.0.0
 options(clusterProfiler.download.method = "wget")
 
@@ -154,72 +154,123 @@ getReactomePathway <- function(rankedLog2FC, pathwayIDs, pathwayDesc, organism) 
 }
 
 preprocessPathway = function(data, organism, DB){
-  entrezIds = bitr(data$GeneID, fromType = "ENSEMBL", toType = "ENTREZID", OrgDb = orgs[orgs$organism==organism, "db"], drop=T)
+  # Convertir TOUS les gènes originaux pour l'univers
+  entrezIds = bitr(data$GeneID, fromType = "ENSEMBL", toType = "ENTREZID", 
+                   OrgDb = orgs[orgs$organism==organism, "db"], drop=T)
+  
   if (DB == "KEGG"){
     keggOrganism = as.character(search_kegg_organism(organism, by='scientific_name')['kegg_code'])
-    keggIds = bitr_kegg(entrezIds$ENTREZID, fromType="ncbi-geneid", toType="kegg", organism=keggOrganism, drop=T)
+    keggIds = bitr_kegg(entrezIds$ENTREZID, fromType="ncbi-geneid", toType="kegg", 
+                        organism=keggOrganism, drop=T)
+    
     colnames(entrezIds) = c("GeneID", "ENTREZID")
     colnames(keggIds) = c("ENTREZID", "KeggIds")
+    
+    # Univers = TOUS les KEGG IDs convertibles depuis les données originales
+    universe_kegg = merge(entrezIds, keggIds)
+    
+    # Données pour l'analyse = merge avec les données originales
     getids = merge(entrezIds, keggIds)
-    data = merge(data, getids)
-    return(list(organism=keggOrganism, genes=data, ranked=rankFC(data, "KeggIds")))
+    processed_data = merge(data, getids)
+    
+    return(list(
+      organism = keggOrganism, 
+      genes = processed_data, 
+      ranked = rankFC(processed_data, "KeggIds"),
+      universe = universe_kegg$KeggIds[!is.na(universe_kegg$KeggIds)]  
+    ))
+    
   } else if (DB == "Reactome"){
     colnames(entrezIds) = c("GeneID", "ENTREZID")
-    data = merge(data, entrezIds)
-    return(list(organism=organism, genes=data, ranked=rankFC(data, "ENTREZID")))
+    
+    universe_entrez = entrezIds
+    
+    processed_data = merge(data, entrezIds)
+    
+    return(list(
+      organism = organism, 
+      genes = processed_data, 
+      ranked = rankFC(processed_data, "ENTREZID"),
+      universe = universe_entrez$ENTREZID[!is.na(universe_entrez$ENTREZID)]  # Vecteur d'IDs
+    ))
   }
 }
 
+
 pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", threshold=0, oraInterest = c("up", "down"), pval= 0.05){
   parameters = list(organism=organism, DB=DB, analysis=analysis, pAdjustMethod=pAdjustMethod, threshold=threshold, oraInterest=oraInterest, pval=pval)
+  
   if (analysis == "ORA"){
     message("Doing an over representation analysis on differentially expressed genes regarding their pathway.")
+    
     #--- Preprocess ---#
-    if ("up" %in% oraInterest & "down" %in% oraInterest) {
-      message(paste("Analyzing DEG with a Log2FC <", log2(threshold), " and >", log2(threshold), ".", sep=""))
-      data = data[abs(data$Log2FC)>log2(threshold),]}
-    else if (oraInterest == "down"){
-      message(paste("Analyzing DEG with a Log2FC <", log2(threshold), ".", sep=""))
-      data = data[data$Log2FC<log2(threshold),]}
-    else if (oraInterest == "up"){
-      message(paste("Analyzing DEG with a Log2FC >", log2(threshold), ".", sep=""))
-      data = data[data$Log2FC>log2(threshold),]}
-    data <- tryCatch({preprocessPathway(data, organism, DB)}, error = function(e) {return(NULL)})
-    if (is.null(data)){
+    background_data <- tryCatch({preprocessPathway(data, organism, DB)}, error = function(e) {return(NULL)})
+    if (is.null(background_data)){
       shinyalert("Database issue", text="Unrecognized ids, please check the selected species or convert your ids using an online converter.", type = "error")
       return()
     }
-    genesList = names(data$ranked)[abs(data$ranked)]
+    
+    sig_genes_df <- as.data.frame(na.omit(background_data$genes[background_data$genes$padj < pval,]))
+    #--- Filtration ---#
+    if ("up" %in% oraInterest & "down" %in% oraInterest) {
+      message(paste("Analyzing DEG with a Log2FC < -", log2(threshold), " and > ", log2(threshold), ".", sep=""))
+      filtered_data = sig_genes_df[abs(sig_genes_df$Log2FC) > log2(threshold),]
+    } else if (length(oraInterest) == 1 && oraInterest == "down"){
+      message(paste("Analyzing DEG with a Log2FC < -", log2(threshold), ".", sep=""))
+      filtered_data = sig_genes_df[sig_genes_df$Log2FC < -log2(threshold),]
+    } else if (length(oraInterest) == 1 && oraInterest == "up"){
+      message(paste("Analyzing DEG with a Log2FC >", log2(threshold), ".", sep=""))
+      filtered_data = sig_genes_df[sig_genes_df$Log2FC > log2(threshold),]
+    } else {
+      return()
+    }
+    genesList = if(DB == "KEGG") filtered_data$KeggIds else filtered_data$ENTREZID
+
+    ratio = (length(genesList) / length(background_data$universe))
+    message(paste("ORA: selected genes represent ", round(ratio*100,2), "% of Universe", sep=""))
+    if (ratio > 0.1) {
+      shinyalert("Statistical issue", text=paste("The genes selected for the ORA analysis represent more than 10% of the initial universe (", round(ratio*100, 2), "%), which can greatly distort and negatively impact the statistical analysis. Please increase the minimum fold change threshold or decrease the maximum p-value threshold.", sep=""), type = "error")
+      return()
+    }
     #--- Analysis ---#
     if (DB == "KEGG"){
-      enrichment = enrichKEGG(genesList, organism=orgs[orgs$organism==organism, "TLname"], universe=data$entrezIds, pvalueCutoff = pval, pAdjustMethod = read.ini("./conf.ini")$STAT$adjust_method, qvalueCutoff = as.numeric(read.ini("./conf.ini")$STAT$q_val))
-      setProgress(message="Downloading pathway visualisations related to ORA enrichment...")
+      enrichment = enrichKEGG(genesList, 
+                              organism=orgs[orgs$organism==organism, "TLname"], 
+                              universe=background_data$universe, 
+                              pvalueCutoff = pval, 
+                              pAdjustMethod = pAdjustMethod, 
+                              qvalueCutoff = as.numeric(read.ini("./conf.ini")$STAT$q_val))
+      setProgress(message="Downloading pathway visualisations related to ORA enrichment...", value = 0.66)
       pathway_images <- NULL
-      if(nrow(enrichment@result) > 0) {
-        print(enrichment@result)
+      if ((!is.null(enrichment)) && (!is.null(enrichment@result)) && (nrow(enrichment@result) > 0)) {
+        message(paste(nrow(enrichment), "enriched pathways"))
         pathway_images <- mapply(function(pathway_id) {
-          getKEGGpathway(enrichment@result[enrichment@result$ID == pathway_id, "geneID"], 
+          getKEGGpathway(enrichment@result[enrichment$ID == pathway_id, "geneID"], 
                          pathway_id, 
                          organism=orgs[orgs$organism==organism, "TLname"], 
                          local=T)
-        }, enrichment@result$ID, SIMPLIFY=FALSE)
+        }, enrichment$ID, SIMPLIFY=FALSE)
       }
-    }
-    if (DB == "Reactome"){
-      enrichment = enrichPathway(genesList, organism=orgs[orgs$organism==organism, "commonName"], universe=data$entrezIds, pvalueCutoff = pval, pAdjustMethod = read.ini("./conf.ini")$STAT$adjust_method, qvalueCutoff = as.numeric(read.ini("./conf.ini")$STAT$q_val))
+    } else if (DB == "Reactome"){
+      enrichment = enrichPathway(genesList, 
+                                 organism=orgs[orgs$organism==organism, "commonName"], 
+                                 universe=background_data$universe, 
+                                 pvalueCutoff = pval, 
+                                 pAdjustMethod = pAdjustMethod,
+                                 qvalueCutoff = as.numeric(read.ini("./conf.ini")$STAT$q_val))
       setProgress(message="Downloading pathway visualisations related to ORA enrichment...")
       pathway_images <- NULL
-        if(nrow(enrichment@result) > 0) {
-          pathway_images <- getReactomePathway(data$ranked,
-                                               enrichment$ID,
-                                               enrichment$Description,
-                                               organism=orgs[orgs$organism==organism, "commonName"])
-        }
+      if ((!is.null(enrichment)) && (!is.null(enrichment@result)) && (nrow(enrichment@result) > 0)) {
+        message(paste(nrow(enrichment), "enriched pathways"))
+        pathway_images <- getReactomePathway(background_data$ranked,
+                                             enrichment$ID,
+                                             enrichment$Description,
+                                             organism=orgs[orgs$organism==organism, "commonName"])
+      }
     }
-    return(list(enrichment=enrichment, processedData = data, parameters=parameters, pathway_images=pathway_images))
-  }
+    return(list(enrichment=enrichment, processedData = background_data, parameters=parameters, pathway_images=pathway_images))}
   if (analysis == "GSEA"){
-    message("Doing Gene Set Enrichment Analysis on differentially expressed genes regarding their pathway.")
+      message("Doing Gene Set Enrichment Analysis on differentially expressed genes regarding their pathway.")
     #--- Preprocess ---#
     data <- tryCatch({preprocessPathway(data, organism, DB)}, error = function(e) {return(NULL)})
     if (is.null(data)){
@@ -230,36 +281,36 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
     if (DB == "KEGG"){
       enrichment = gseKEGG(data$ranked, organism=orgs[orgs$organism==organism, "TLname"], 
                                                pvalueCutoff = pval,
-                                               minGSSize    = 10,
                                                verbose      = FALSE, 
-                           pAdjustMethod = read.ini("./conf.ini")$STAT$adjust_method)
-      setProgress(message="Downloading pathway visualisations related to GSEA enrichment...")
+                           pAdjustMethod = pAdjustMethod)
+      setProgress(message="Downloading pathway visualisations related to GSEA enrichment...", value = 0.66)
       pathway_images <- NULL
-      if(nrow(enrichment@result) > 0) {
+      if ((!is.null(enrichment)) && (!is.null(enrichment@result)) && (nrow(enrichment@result) > 0)) {
+        message(paste(nrow(enrichment), "enriched pathways"))
         pathway_images <- mapply(function(pathway_id) {
-          getKEGGpathway(enrichment@result[enrichment@result$ID == pathway_id, "core_enrichment"], 
+          getKEGGpathway(enrichment@result[enrichment$ID == pathway_id, "core_enrichment"], 
                          pathway_id, 
                          organism=orgs[orgs$organism==organism, "TLname"], 
                          local=T)
-        }, enrichment@result$ID, SIMPLIFY=FALSE)
+        }, enrichment$ID, SIMPLIFY=FALSE)
       }
-    }
-    if (DB == "Reactome"){
+    } else if (DB == "Reactome"){
       enrichment = gsePathway(data$ranked, 
                                organism=orgs[orgs$organism==organism, "commonName"],
                                pvalueCutoff = pval,
-                               minGSSize    = 10, #Previously 120
                                verbose      = FALSE, 
-                              pAdjustMethod = read.ini("./conf.ini")$STAT$adjust_method)
+                              pAdjustMethod = pAdjustMethod)
       setProgress(message="Downloading pathway visualisations related to GSEA enrichment...")
       pathway_images <- NULL
-        if(nrow(enrichment@result) > 0) {
-          pathway_images <- getReactomePathway(data$ranked,
+      if ((!is.null(enrichment)) && (!is.null(enrichment@result)) && (nrow(enrichment@result) > 0)) {
+        message(paste(nrow(enrichment), "enriched pathways"))  
+        pathway_images <- getReactomePathway(data$ranked,
                                                enrichment$ID,
                                                enrichment$Description,
                                                organism=orgs[orgs$organism==organism, "commonName"])
         }
     }
+    
     return(list(enrichment=enrichment, processedData = data, parameters=parameters, pathway_images=pathway_images))
     }
 }

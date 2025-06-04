@@ -34,14 +34,13 @@ RUN R -e "install.packages(c( \
     'fresh', \
     'ggplot2', \
     'ggtext', \
+    'ggridges', \
+    'ggupset', \
     'readxl', \
     'data.table', \
     'DT', \
     'ini', \
     'plyr', \
-    'ggridges', \
-    'ggupset', \
-    'fs', \
     'knitr' \
   ), repos='https://cloud.r-project.org/')"
 
@@ -49,7 +48,7 @@ RUN R -e "install.packages(c( \
 # Installation of Bioconductor packages
 RUN R -e 'BiocManager::install( \
   c("ReactomePA", "clusterProfiler", "pathview", \
-    "enrichplot", "GOSemSim", "topGO", "GO.db", \
+    "enrichplot", "topGO", "GO.db", \
     "org.At.tair.db", "org.Bt.eg.db", "org.Cf.eg.db", "org.Gg.eg.db", \
     "org.EcK12.eg.db", "org.Dm.eg.db", "org.Hs.eg.db", "org.Mm.eg.db", \
     "org.Ss.eg.db", "org.Rn.eg.db", "org.Ce.eg.db", "org.Xl.eg.db", \

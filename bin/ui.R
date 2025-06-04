@@ -4,8 +4,8 @@
 # louison.lesage@univ-rouen.fr
 # Students at Rouen Normandy University
 # Master of Bioinformatics, class M2.2 BIMS 2026 
-# Last updated : 13/05/2025
-# HEATraN version 0.3.0
+# Last updated : 04/06/2025
+# HEATraN version 1.0.0
 
 # Theme definition
 HEATraN_theme <- create_theme(
@@ -103,7 +103,7 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                   </div>
                   <br/>
                   <div style="text-align:right; position: fixed; bottom: 20px; right: 20px; font-size: 16px; background-color: white; font-size: 12px; padding: 10px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-                      <em>0.2.0-a.5</em>
+                      <em>1.0.0</em>
                   </div>
               </div>'),
                           
@@ -118,8 +118,7 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                                           selectInput("ajust_method", label="Select p-value ajust method:",
                                                       choices=c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr"),
                                                       selected = read.ini("../conf.ini")$STAT$adjust_method),
-                                          HTML("<br/>Each enrichment is constrained both by the adjusted p-value threshold (using the method above) and by a q-value threshold.<br/>"),
-                                          HTML("<br/>"),
+                                          HTML("<br/>ORA enrichment is constrained both by the adjusted p-value threshold (using the method above) and by a q-value threshold.<br/>"),
                                           numericInput("q_val", label="Select a q-value threshold", min=0, max=1, value = read.ini("../conf.ini")$STAT$q_val, step=0.01))
                                         )))
                   ),
@@ -219,31 +218,31 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                       )),
                     
                   tabPanel("Results (ORA)", 
-                      fluidRow(
+                      fluidRow(style = "height: 600px;",
                            box(title = HTML("Bar Plot"),
-                               id = "goOraBarplot", width = 6,
-                               spinner(plotOutput("goBarplot", height = "425px"))
+                               id = "goOraBarplot", width = 6, height = "575px",
+                               spinner(plotOutput("goBarplot", height = "575px"))
                                ),
                            box(
                            title = HTML("Dot Plot"),
-                           id = "goOraDotplot", width = 6,
-                           spinner(plotOutput("goDotplot", height = "425px"))
+                           id = "goOraDotplot", width = 6, height = "575px",
+                           spinner(plotOutput("goDotplot", height = "575px"))
                            )),
-                        fluidRow(
+                        fluidRow(style = "height: 600px;",
                           box(
                             title = HTML("Gene–Concept Network (microscopic view)"),
-                            id = "goOraNetplot", width = 6,
-                            spinner(plotOutput("goNetplot", height = "425px"))
+                            id = "goOraNetplot", width = 6, height = "575px",
+                            spinner(plotOutput("goNetplot", height = "575px"))
                           ),
                           box(
                             title = HTML("Enrichment Map (macroscopic overview)"),
-                            id = "goOraEmapPlot", width = 6,
-                            spinner(plotOutput("goEmapPlot", height = "425px"))
+                            id = "goOraEmapPlot", width = 6, height = "575px",
+                            spinner(plotOutput("goEmapPlot", height = "575px"))
                           )),
-                      fluidRow(
+                      fluidRow(style = "height: 600px;",
                         box(title = HTML("Upset Plot"),
-                            id = "goOraUpsetplot", width = 12,
-                            spinner(plotOutput("goUpsetplot", height = "425px"))
+                            id = "goOraUpsetplot", width = 12, height = "575px",
+                            spinner(plotOutput("goUpsetplot", height = "575px"))
                         )),
                         fluidRow(
                           box(
@@ -261,38 +260,35 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                       )
                                 ),
                                 
-                                # Onglet GSEA
                          tabPanel("Results (GSEA)",
-                                  # Graphiques GSEA dans des box séparées
-                                  fluidRow(
+                                  fluidRow(style = "height: 600px;",
                                     box(
                                       title = HTML("Ridge Plot"),
-                                      id = "goGseaRidgeplotBox", width = 6,
-                                      spinner(plotOutput("goGseaRidgeplot", height = "425px"))
+                                      id = "goGseaRidgeplotBox", width = 6, height = "575px",
+                                      spinner(plotOutput("goGseaRidgeplot", height = "575px"))
                                     ),
                                     box(
                                       title = HTML("Dot Plot"),
-                                      id = "goGseaDotplotBox", width = 6,
-                                      spinner(plotOutput("goGseaDotplot", height = "425px"))
+                                      id = "goGseaDotplotBox", width = 6, height = "575px",
+                                      spinner(plotOutput("goGseaDotplot", height = "575px"))
                                     )
                                   ),
-                                  fluidRow(
+                                  fluidRow(style = "height: 600px;",
                                     box(
                                       title = HTML("Gene–Concept Network (microscopic view)"),
-                                      id = "goGseaNetplot", width = 6,
-                                      spinner(plotOutput("goGseaNetplot", height = "425px"))
+                                      id = "goGseaNetplot", width = 6, height = "575px",
+                                      spinner(plotOutput("goGseaNetplot", height = "575px"))
                                     ),
                                     box(
                                       title = HTML("Enrichment Map (macroscopic overview)"),
-                                      id = "goGseaEmapplot", width = 6,
-                                      spinner(plotOutput("goGseaEmapPlot", height = "425px"))
+                                      id = "goGseaEmapplot", width = 6, height = "575px",
+                                      spinner(plotOutput("goGseaEmapPlot", height = "575px"))
                                     )),
-                                  fluidRow(
+                                  fluidRow(style = "height: 600px;",
                                     box(title = HTML("Upset Plot"),
-                                       id = "goGseaUpsetplot", width = 12,
-                                       spinner(plotOutput("goGseaUpsetplot", height = "425px"))
+                                       id = "goGseaUpsetplot", width = 12, height = "575px",
+                                       spinner(plotOutput("goGseaUpsetplot", height = "575px"))
                                   )),
-                                  # Box conditionnelle pour les graphiques GSEA détaillés
                                   fluidRow(
                                     box(
                                       title = HTML("GSEA Enrichment Plot"),
@@ -349,39 +345,39 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                                        ),
                                      )),
                                      tabPanel("Results (ORA)",
-                                              # Plots spécifiques à ORA
-                                              fluidRow (height="875px",
-                                                box(title = "Tree plot", width = 6, height="850px",
-                                                    spinner(plotOutput("pathway_ora_treeplot"))),
-                                                box(title = "Dot plot", width = 6, height="850px",
-                                                    spinner(plotOutput("pathway_ora_dotplot"))),
-                                                fluidRow(height="875px",
-                                                         box(title = "Gene–Concept Network (microscopic view)", width = 6, height="850px",
-                                                             spinner(plotOutput("pathway_ora_cnetplot"))),
-                                                          box(title = "Enrichment Map (macroscopic overview)", width = 6, height="850px",
-                                                              spinner(plotOutput("pathway_ora_emapplot")))),
-                                                fluidRow(height="875px",
-                                                          box(title = "Upset Plot", width = 12, height="850px",
-                                                              spinner(plotOutput("pathway_ora_upsetplot")))),
+                                              fluidRow (style = "height: 600px;",
+                                                box(title = "Tree plot", width = 7, height="575px",
+                                                    spinner(plotOutput("pathway_ora_treeplot", height="575px"))),
+                                                box(title = "Dot plot", width = 5, height="575px",
+                                                    spinner(plotOutput("pathway_ora_dotplot", height="575px")))
+                                                ),
+                                                fluidRow(style = "height: 600px;",
+                                                         box(title = "Gene–Concept Network (microscopic view)", width = 6, height="575px",
+                                                             spinner(plotOutput("pathway_ora_cnetplot", height="575px"))),
+                                                          box(title = "Enrichment Map (macroscopic overview)", width = 6, height="575px",
+                                                              spinner(plotOutput("pathway_ora_emapplot", height="575px")))),
+                                                fluidRow(style = "height: 600px;",
+                                                          box(title = "Upset Plot", width = 12, height="575px",
+                                                              spinner(plotOutput("pathway_ora_upsetplot",  height="575px")))),
                                                 fluidRow (
                                                   box(title = "Table", width = 12,
                                                       spinner(DT::dataTableOutput("pathway_ora_table"))))
-                                              )
                                      ),
                                      tabPanel("Results (GSEA)",
-                                                fluidRow (
-                                                  box(title = "Tree plot", width = 6, height="850px",
-                                                      spinner(plotOutput("pathway_gsea_treeplot"))),
-                                                  box(title = "Dot plot", width = 6, height="850px",
-                                                      spinner(plotOutput("pathway_gsea_dotplot")))),
-                                                  fluidRow(height="875px",
-                                                           box(title = "Gene–Concept Network (microscopic view)", width = 6, height="850px",
-                                                               spinner(plotOutput("pathway_gsea_cnetplot"))),
-                                                           box(title = "Enrichment Map (macroscopic overview)", width = 6, height="850px",
-                                                               spinner(plotOutput("pathway_gsea_emapplot")))),
-                                                fluidRow(height="875px",
-                                                       box(title = "Upset Plot", width = 12, height="850px",
-                                                           spinner(plotOutput("pathway_gsea_upsetplot")))),
+                                                fluidRow (style = "height: 600px;",
+                                                  box(title = "Tree plot", width = 7, height="575px",
+                                                      spinner(plotOutput("pathway_gsea_treeplot", height="575px"))),
+                                                  box(title = "Dot plot", width = 5, height="575px",
+                                                      spinner(plotOutput("pathway_gsea_dotplot",  height="575px")))
+                                                  ),
+                                                  fluidRow(style = "height: 600px;",
+                                                           box(title = "Gene–Concept Network (microscopic view)", width = 6, height="575px",
+                                                               spinner(plotOutput("pathway_gsea_cnetplot",  height="575px"))),
+                                                           box(title = "Enrichment Map (macroscopic overview)", width = 6, height="575px",
+                                                               spinner(plotOutput("pathway_gsea_emapplot", height="575px")))),
+                                                fluidRow(style = "height: 600px;",
+                                                       box(title = "Upset Plot", width = 12, height="575px",
+                                                           spinner(plotOutput("pathway_gsea_upsetplot",  height="575px")))),
                                                   fluidRow (
                                                     box(title = "EnrichPlot", width = 12, height="850px",
                                                         selectInput("pathwayGSEA", "Select one or more pathways:", choices = c("None"), selected = "None", multiple=TRUE),
@@ -393,11 +389,11 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                                      ),
                                      tabPanel("View Pathway",
                                               fluidRow(
-                                                box(width = 12,
+                                                box(title = "Pathway visualisation", width = 12,
                                                 column(12,
-                                                       selectInput("pathway", "Select pathway:", choices = NULL),
-                                                       spinner(imageOutput("pathwayImage", height = "600px"))
-                                                ))
+                                                       selectInput("pathway", "Select a pathway:", choices = NULL))),
+                                                       spinner(imageOutput("pathwayImage", height = "600px")
+                                                )
                                               )
                                      ))),
                 

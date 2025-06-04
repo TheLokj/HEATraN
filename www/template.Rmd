@@ -649,7 +649,7 @@ display_output <- function(obj, output_name) {
       obj <- obj[1:params$nGenes, ]
       cat("Table limited to the first", params$nGenes, "results.\n\n")
     }
-    print(kable(obj, caption = paste("Table :", output_name)))
+    print(kable(obj, caption = paste("Table :", output_name), digits = 6))
   } else if (is.list(obj) && !is.null(obj$src)) {
     knitr::include_graphics(obj$src)
     cat("\n\n")
@@ -693,8 +693,7 @@ if ("GO ORA" %in% params$export_choices) {
       "GO ORA Enrichment map\n\n" = params$goEmapPlot,
       "GO ORA Gene-Network plot\n\n"     = params$goNetplot,
       "GO ORA Table\n\n"            = params$goTable,
-      "GO ORA Upset plot\n\n"       = params$goUpsetplot,
-      "GO ORA Significant nodes\n\n"= params$gosigOfnodesplot
+      "GO ORA Upset plot\n\n"       = params$goUpsetplot
     )
     for (output_name in names(go_ora_outputs)) {
       obj <- go_ora_outputs[[output_name]]

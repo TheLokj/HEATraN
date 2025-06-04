@@ -4,7 +4,7 @@
 # louison.lesage@univ-rouen.fr
 # Students at Rouen Normandy University
 # Master of Bioinformatics, class M2.2 BIMS 2026 
-# Last updated : 03/06/2025
+# Last updated : 04/06/2025
 # HEATraN version 1.0.0
 
 setwd("../")
@@ -38,8 +38,8 @@ emptyPlot <- ggplot() +
 
 emptyGseaPlot <- ggplot() + 
   geom_richtext(aes(x = 0.5, y = 0.5, 
-                    label = "<b style='font-family:Mulish,sans-serif;font-size:20pt;'>Please select at least one enriched pathway</b>"), 
-                size = 6, color = "red3", fill = NA, label.color = NA) +
+                    label = "<b style='font-family:Mulish,sans-serif;font-size:20pt;'>Please select a pathway</b>"), 
+                size = 3, color = "red3", fill = NA, label.color = NA) +
   theme_void() +
   theme(panel.background = element_rect(fill = "white", color = NA))
 
@@ -50,9 +50,9 @@ emptyPathwayPlot <- ggplot() +
   theme_void() +
   theme(panel.background = element_rect(fill = "white", color = NA))
 
-tooSmallTreePlot <- ggplot() + 
+notEnoughDataplot <- ggplot() + 
   geom_richtext(aes(x = 0.5, y = 0.5, 
-                    label = "<b style='font-family:Mulish,sans-serif;font-size:20pt;'>Tree plot requires at least 2 significant data</b>"), 
+                    label = "<b style='font-family:Mulish,sans-serif;font-size:20pt;'>Insufficient enriched data for clustering</b>"), 
                 size = 6, color = "red3", fill = NA, label.color = NA) +
   theme_void() +
   theme(panel.background = element_rect(fill = "white", color = NA))
@@ -108,7 +108,6 @@ function(input, output, session) {
     message("Preprocessing data")
     dataToPreprocess <- importedData()
     # If the required columns aren't found, 
-    print(requiredNames)
     if (FALSE %in% c(requiredNames %in% colnames(dataToPreprocess))){
       shinyalert(html = TRUE, "Please select the variables", "Wrong column name", type = "info", confirmButtonCol = "#7e3535",
                  text = tagList(
@@ -209,8 +208,6 @@ function(input, output, session) {
     pathwayGSEADotPlot <- reactive({
       if (!is.null(pathwayGSEAEnrichment())) {
         data = pathwayGSEAEnrichment()$enrichment
-        result_df <- data@result
-        data@result <- result_df
         plot = dotplot(data, showCategory=30) + ggtitle("Dotplot" )  
         return(plot)
       } else {
@@ -249,8 +246,6 @@ function(input, output, session) {
     pathwayORADotPlot <- reactive({
       if (!is.null(pathwayORAEnrichment())) {
         data = pathwayORAEnrichment()$enrichment
-        result_df <- data@result
-        data@result <- result_df
         plot = dotplot(data, showCategory=30) + ggtitle("Dotplot" )  
         return(plot)
       } else {
@@ -259,46 +254,20 @@ function(input, output, session) {
     )
     
     pathwayORATreePlot <- reactive({
-      # 1) récupérer le résultat ORA (une liste contenant $enrichment)
-      res <- pathwayORAEnrichment()
-      if (is.null(res)) {
+      data <- pathwayORAEnrichment()
+      if (is.null(data)) {
         return(emptyPlot)
       }
-      
-      # 2) extraire le data.frame des résultats et compter les feuilles
-      enr    <- res$enrichment
-      n_leaf <- nrow(enr)
-      
-      # 3) gérer les tout petits cas (0 ou 1 terme)
-      if (n_leaf <= 1) {
-        return(tooSmallTreePlot)
-      }
-      
-      # 4) calculer les similarités entre termes
-      dataR <- pairwise_termsim(
-        setReadable(
-          enr,
-          orgs[orgs$organism == input$species, "db"],
-          keyType = "ENTREZID"
-        )
-      )
-      
-      # 5) définir k = n_leaf - 1 pour respecter 1 <= k <= n_leaf-1
-      k_dyn <- n_leaf - 1
-      #    (optionnel : plafonner k à une valeur max, p.ex. min(k_dyn, 5))
-      
-      # 6) tracer l’arbre avec k sur-mesure
-      treeplot(
-        dataR,
-        k = k_dyn
-      )
+      dataR <- pairwise_termsim(setReadable(data$enrichment,orgs[orgs$organism == input$species, "db"],keyType = "ENTREZID"))
+      tryCatch({treeplot(dataR)}, error = function(e) { notEnoughDataplot })
     })
+    
     
     pathwayORACnetPlot <- reactive({
       if (!is.null(pathwayORAEnrichment())) {
         data = pathwayORAEnrichment()$enrichment
         dataR = setReadable(data, orgs[orgs$organism==input$species, "db"], 'ENTREZID')
-        plot = cnetplot(dataR)
+        plot = cnetplot(dataR, layout = "kk")
         return(plot)
       } else {
         return(emptyPlot)
@@ -309,7 +278,7 @@ function(input, output, session) {
       if (!is.null(pathwayORAEnrichment())) {
         data = pathwayORAEnrichment()$enrichment
         dataR = setReadable(data, orgs[orgs$organism==input$species, "db"], 'ENTREZID')
-        plot = emapplot(pairwise_termsim(dataR))
+        plot = tryCatch({emapplot(pairwise_termsim(dataR), layout = "kk", showCategory = 15)}, error = function(e) { notEnoughDataplot })
         return(plot)
       } else {
         return(emptyPlot)
@@ -320,7 +289,7 @@ function(input, output, session) {
       if (!is.null(pathwayGSEAEnrichment())) {
         data = pathwayGSEAEnrichment()$enrichment
         dataR = setReadable(data, orgs[orgs$organism==input$species, "db"], 'ENTREZID')
-        plot = emapplot(pairwise_termsim(dataR))
+        plot = tryCatch({emapplot(pairwise_termsim(dataR), layout = "kk", showCategory = 15)}, error = function(e) { notEnoughDataplot })
         return(plot)
       } else {
         return(emptyPlot)
@@ -328,46 +297,19 @@ function(input, output, session) {
     })
     
     pathwayGSEATreePlot <- reactive({
-      res <- pathwayGSEAEnrichment()
-      if (is.null(res)) {
+      data <- pathwayGSEAEnrichment()
+      if (is.null(data)) {
         return(emptyPlot)
       }
-      
-      enr <- res$enrichment     
-      geneList <- res$geneList     
-      
-      n_leaf <- nrow(enr)
-      if (n_leaf <= 1) {
-        return(tooSmallTreePlot)
-      }
-      
-      dataR <- pairwise_termsim(
-        setReadable(
-          enr,
-          orgs[orgs$organism == input$species, "db"],
-          keyType = "ENTREZID"
-        )
-      )
-      k_dyn <- n_leaf - 1
-      
-      tryCatch({
-        treeplot(
-          dataR,
-          foldChange = geneList,
-          k = k_dyn
-        )
-      }, error = function(e) {
-        return(tooSmallTreePlot)  
-      })
+      dataR <- pairwise_termsim(setReadable(data$enrichment,orgs[orgs$organism == input$species, "db"],keyType = "ENTREZID"))
+      tryCatch({treeplot(dataR, foldChange=data$geneList)}, error = function(e) { notEnoughDataplot })
     })
-    
-    
     
     pathwayGSEACnetPlot <- reactive({
       if (!is.null(pathwayGSEAEnrichment())) {
         data = pathwayGSEAEnrichment()$enrichment
         dataR = setReadable(data, orgs[orgs$organism==input$species, "db"], 'ENTREZID')
-        plot = cnetplot(dataR, foldChange=data@geneList)
+        plot = cnetplot(dataR, foldChange=data@geneList, layout = "kk")
         return(plot)
       } else {
         return(emptyPlot)
@@ -613,6 +555,14 @@ function(input, output, session) {
           analysis_type <- "down"
         }
         
+        ratio = (length(genes_to_analyze) / length(universe))
+        message(paste("ORA: selected genes represent ", round(ratio*100,2), "% of Universe", sep=""))
+        if (ratio > 0.1) {
+          shinyalert("Statistical issue", text=paste("The genes selected for the ORA analysis represent more than 10% of the initial universe (", round(ratio*100, 2), "%), which can greatly distort and negatively impact the statistical analysis. Please increase the minimum fold change threshold or decrease the maximum p-value threshold.", sep=""), type = "error")
+          goOraResults(NULL)
+          return()
+        }
+        
         if (length(genes_to_analyze) > 0) {
           result_go <- tryCatch({enrichGO(
             gene = genes_to_analyze,
@@ -661,8 +611,8 @@ function(input, output, session) {
     if (!is.null(goGseaResults())) {
       data = goGseaResults()
       updateSelectInput(session, "goGSEA", 
-                        choices = setNames(1:length(data@result$Description), 
-                                           data@result$Description))
+                        choices = setNames(1:length(data$Description), 
+                                           data$Description))
     }
   })
   
@@ -680,7 +630,7 @@ function(input, output, session) {
             message("Computing Pathway enrichment...")
             df = as.data.frame(preprocessedData())
             if ("ORA" %in% input$analysisMethodChoice) {
-              setProgress(message = "Computing ORA enrichment for Pathway...")
+              setProgress(message = "Computing ORA enrichment for Pathway...", value=0.33)
               
               # 1. Run enrichment and store in a temp var
               res <- pathway(
@@ -702,10 +652,12 @@ function(input, output, session) {
                 pathwayORAEnrichment(res)
                 showTab(inputId = "pathway_tabs", target = "View Pathway", session = session)
               }
+            } else {
+              pathwayORAEnrichment(NULL)
             }
             
             if ("GSEA" %in% input$analysisMethodChoice) {
-              setProgress(message = "Computing GSEA enrichment for Pathway...")
+              setProgress(message = "Computing GSEA enrichment for Pathway...", value=0.33)
               
               res <- pathway(
                 df,
@@ -713,6 +665,7 @@ function(input, output, session) {
                 DB         = input$dbPathwaychoice,
                 analysis   = "GSEA",
                 oraInterest= input$oraChoice,
+                pAdjustMethod = config$STAT$adjust_method,
                 pval       = input$pvalPathway
               )
               
@@ -723,6 +676,8 @@ function(input, output, session) {
                 pathwayGSEAEnrichment(res)
                 showTab(inputId = "pathway_tabs", target = "View Pathway", session = session)
               }
+            } else {
+              pathwayGSEAEnrichment(NULL)
             }
         })
     }}) |> bindEvent(input$analysisPathwayButton)
@@ -744,7 +699,7 @@ function(input, output, session) {
         
         updateSelectInput(session, "pathway", 
                           choices = combined_results$choices,
-                          selected = names(combined_results$choices)[1])
+                          selected = combined_results$choices[1])
       }
     })
   
@@ -814,7 +769,7 @@ function(input, output, session) {
   output$goEmapPlot <- renderPlot({
     if (!(is.null(goOraResults()))) {
       go_enrich <- pairwise_termsim(goOraResults()$result)
-      emapplot(go_enrich, layout = "kk", showCategory = 15)
+      tryCatch({emapplot(go_enrich, layout = "kk", showCategory = 15)}, error = function(e) { notEnoughDataplot })
     } else { emptyPlot }
   })
   
@@ -859,7 +814,7 @@ function(input, output, session) {
   output$goGseaEmapPlot <- renderPlot({
     if (!(is.null(goGseaResults()))) {
       go_enrich <- pairwise_termsim(goGseaResults())
-      emapplot(go_enrich, layout = "kk", showCategory = 15)
+      tryCatch({emapplot(go_enrich, layout = "kk", showCategory = 15)}, error = function(e) { notEnoughDataplot })
     } else { emptyPlot }
   })
   
@@ -889,10 +844,8 @@ function(input, output, session) {
       }
       if (nrow(df) != 0) {
         datatable(df, escape = F, options = list(scrollX = TRUE, autoWidth = TRUE))
-      }
-      else {
-        emptyTableGo
-        }
+      } else {
+        emptyTableGo}
     } else {
       emptyTableGo
     }
@@ -1049,8 +1002,8 @@ function(input, output, session) {
       
       if (!is.null(ora_results) && !is.null(gsea_results)) {
         
-        ora_data <- ora_results$enrichment@result[, common_cols, drop = FALSE]
-        gsea_data <- gsea_results$enrichment@result[, common_cols, drop = FALSE]
+        ora_data <- ora_results$enrichment[, common_cols, drop = FALSE]
+        gsea_data <- gsea_results$enrichment[, common_cols, drop = FALSE]
         
         ora_data$analysis_type <- "ORA"
         gsea_data$analysis_type <- "GSEA"
@@ -1073,7 +1026,7 @@ function(input, output, session) {
         ))
         
       } else if (!is.null(ora_results)) {
-        ora_data <- ora_results$enrichment@result[, common_cols, drop = FALSE]
+        ora_data <- ora_results$enrichment[, common_cols, drop = FALSE]
         ora_data$analysis_type <- "ORA"
         
         if (ora_results$parameters$DB == "KEGG") {
@@ -1090,7 +1043,7 @@ function(input, output, session) {
         ))
         
       } else if (!is.null(gsea_results)) {
-        gsea_data <- gsea_results$enrichment@result[, common_cols, drop = FALSE]
+        gsea_data <- gsea_results$enrichment[, common_cols, drop = FALSE]
         gsea_data$analysis_type <- "GSEA"
         
         if (gsea_results$parameters$DB == "KEGG") {
@@ -1207,7 +1160,7 @@ function(input, output, session) {
         paste0("HEATraN_results_", Sys.Date(), ".html")
       },
       content = function(file) {
-        withProgress(message = 'Generating report...', value = 0, {
+        withProgress(message = 'Generating report...', value = 0.2, {
           tempReport <- file.path(tempdir(), "template.Rmd")
           file.copy("www/template.Rmd", tempReport, overwrite = TRUE)
           
@@ -1261,14 +1214,14 @@ function(input, output, session) {
               goEmapPlot = tryCatch({
                 if (!is.null(goOraResults()) && !is.null(goOraResults()$result)) {
                   go_enrich <- pairwise_termsim(goOraResults()$result)
-                  emapplot(go_enrich, layout = "kk", showCategory = 15)
+                  tryCatch({emapplot(pairwise_termsim(dataR), layout = "kk", showCategory = 15)}, error = function(e) { notEnoughDataplot })
                 } else NULL
               }, error = function(e) NULL),
               
               goNetplot = tryCatch({
                 if (!is.null(goOraResults()) && !is.null(goOraResults()$result)) {
                   go_enrich <- pairwise_termsim(goOraResults()$result)
-                  cnetplot(go_enrich, layout = "kk", showCategory = 15)
+                  tryCatch({emapplot(pairwise_termsim(dataR), layout = "kk", showCategory = 15)}, error = function(e) { notEnoughDataplot })
                 } else NULL
               }, error = function(e) NULL),
               
@@ -1298,7 +1251,6 @@ function(input, output, session) {
                 NULL
               }),
               
-              # GO GSEA outputs
               goGseaUpsetplot = tryCatch({
                 if (!is.null(goGseaResults())) {
                   upsetplot(goGseaResults())
