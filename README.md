@@ -17,7 +17,7 @@ Then, HEATraN can be launched using several ways.
 
 ### Online
 
-*WIP*
+*Coming soon*
 
 ### Locally
 
@@ -32,7 +32,7 @@ This ensures that all the necessary dependencies and libraries are installed, in
 
 You can then launch it by typing:
 
-`docker run -p 3838:3838 heatran-app R -e "shiny::runApp('/srv/shiny-server/HEATraN/app.R', host='0.0.0.0', port=3838)"`
+`docker run --init -p 3838:3838 heatran-app`
 
 #### R & Rstudio
 
@@ -45,9 +45,9 @@ From a terminal, you can enter :
 
 `R -e "shiny:runApp('app.r', port=3838')"`
 
-#### Requirements for manual installation 
+#### Requirements for manual installation
 
-##### Bioconductor Packages
+##### CRAN Packages
 
 | **Library** | **Version** |
 | :-- | :-- |
@@ -62,7 +62,7 @@ From a terminal, you can enter :
 | ggplot2 | 3.5.2 |
 | ggtext | 0.1.2 |
 | readxl | 1.4.5 |
-| data.table | 1.17.0 |
+| data.table | 1.17.4 |
 | DT | 0.33 |
 
 ##### Bioconductor Packages
@@ -77,16 +77,16 @@ From a terminal, you can enter :
 | org.At.tair.db | 3.18.0 |
 | org.Bt.eg.db | 3.18.0 |
 | org.Cf.eg.db | 3.18.0 |
-| org.Gg.eg.db | 3.18.0 |
-| org.EcK12.eg.db | 3.18.0 |
 | org.Dm.eg.db | 3.18.0 |
+| org.EcK12.eg.db | 3.18.0 |
+| org.Gg.eg.db | 3.18.0 |
 | org.Hs.eg.db | 3.18.0 |
 | org.Mm.eg.db | 3.18.0 |
-| org.Ss.eg.db | 3.18.0 |
 | org.Rn.eg.db | 3.18.0 |
+| org.Ss.eg.db | 3.18.0 |
 | org.Ce.eg.db | 3.18.0 |
-| org.Xl.eg.db | 3.18.0 |
 | org.Sc.sgd.db | 3.18.0 |
+| org.Xl.eg.db | 3.18.0 |
 | org.Dr.eg.db | 3.18.0 |
 
 If one of these packages does not install, make sure that all the required software libraries are installed:
@@ -121,4 +121,4 @@ To cite this project, please refers to:
 
 `Daher R., Naid El Djoudi L., Lesage L., Dauchel H. (2025). HEATraN. [https://github.com/TheLokj/HEATraN].`
 
-Please also remember to cite the authors of the packages used by HEATraN and listed above.
+Please also cite the authors of the packages used by HEATraN and listed above.

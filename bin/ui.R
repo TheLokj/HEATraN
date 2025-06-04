@@ -14,8 +14,8 @@ HEATraN_theme <- create_theme(
   )
 )
 
-fea_page <- readChar("../www/doc.html", file.info("../www/doc.html")$size)
-stat_page <- readChar("../www/stat.html", file.info("../www/stat.html")$size)
+fea_page <- readChar("./www/doc.html", file.info("./www/doc.html")$size)
+stat_page <- readChar("./www/stat.html", file.info("./www/stat.html")$size)
 
 spinner <- function(plot, type = 6, color = "#ef940b") {
   shinycssloaders::withSpinner(plot, type = type, color = color)
@@ -24,7 +24,7 @@ spinner <- function(plot, type = 6, color = "#ef940b") {
 # -----------------------------------------
 # Dashboard creation
 # -----------------------------------------
-dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-size:26px; color:#ebb233; font-weight:900'>HEATraN</b>")), 
+ui <- dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-size:26px; color:#ebb233; font-weight:900'>HEATraN</b>")), 
               
               # -----------------------------------------
               # Sidebar elements
@@ -51,7 +51,7 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                               "Xenopus laevis")),
                 
                 # File importation: csv, tsv, xls and xlsx
-                fileInput("tableInput", 
+                fileInput("table_input", 
                           "Import associated data:",
                           accept = c(
                             "text/csv",
@@ -82,7 +82,7 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                 
                 # Load style and theme
                 use_theme(HEATraN_theme),
-                includeCSS("../www/style.css"),
+                includeCSS("./www/style.css"),
                 
                 tabItems(
                   tabItem(tabName = "HOME",
@@ -117,9 +117,9 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                                           HTML(""),
                                           selectInput("ajust_method", label="Select p-value ajust method:",
                                                       choices=c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr"),
-                                                      selected = read.ini("../conf.ini")$STAT$adjust_method),
+                                                      selected = read.ini("./conf.ini")$STAT$adjust_method),
                                           HTML("<br/>ORA enrichment is constrained both by the adjusted p-value threshold (using the method above) and by a q-value threshold.<br/>"),
-                                          numericInput("q_val", label="Select a q-value threshold", min=0, max=1, value = read.ini("../conf.ini")$STAT$q_val, step=0.01))
+                                          numericInput("q_val", label="Select a q-value threshold", min=0, max=1, value = read.ini("./conf.ini")$STAT$q_val, step=0.01))
                                         )))
                   ),
                   
@@ -130,8 +130,8 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                           fluidRow (
                             box(
                               title = HTML("<b>Volcano plot</b>"),
-                              id = "volcanoplot", height = "500px",
-                              plotOutput("volcanoPlot", 
+                              id = "volcano_plot", height = "500px",
+                              plotOutput("volcano_plot", 
                                          height="425px",
                                          click = "plot_click",
                                          dblclick = "plot_dblclick",
@@ -144,7 +144,7 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                               shinyjs::useShinyjs(),
                               title = HTML("<b>Selection options</b>"), side = "right",
                               id = "tabset2", height = "500px",
-                              htmlOutput("InfoSelect"),
+                              htmlOutput("info_select"),
                               sliderInput("pval", "Maximum ajusted p-value", min = 0, max = 1, value = 0.05, round=F, step=0.001),
                               sliderInput("Log2FC", "Minimum absolute log2(FoldChange)", min = 0, max = 1, value = 0),
                               actionButton("SelectAll", "Select all data", icon=icon('search', lib='glyphicon')),
@@ -152,7 +152,7 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                               actionButton("ZoomButton", "Zoom in the selection", icon=icon('zoom-in', lib='glyphicon')),
                               HTML("<br/><br/><b>Save options</b><br/><br/>"),
                               downloadButton("Download", "Download plot", icon=icon('download-alt', lib='glyphicon')),
-                              downloadButton("DownloadTable", "Export table", icon=icon('share', lib='glyphicon'))
+                              downloadButton("download_table", "Export table", icon=icon('share', lib='glyphicon'))
                             )),
                           fluidRow (
                             box(
@@ -193,8 +193,8 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                              # Sélection des gènes d'intérêt pour ORA
                              conditionalPanel(
                                condition = "input.go_analysisMethodChoice.includes('Over Representation Analysis (ORA)')",
-                               sliderInput("go_oraFC", label="ORA - Minimum Absolute Fold-Change (×) to be considered over- or under-enriched", value=1, step=0.01, min=1, max=4),
-                               checkboxGroupInput("go_oraChoice", "ORA - Interest",
+                               sliderInput("go_ora_fc", label="ORA - Minimum Absolute Fold-Change (×) to be considered over- or under-enriched", value=1, step=0.01, min=1, max=4),
+                               checkboxGroupInput("go_ora_choice", "ORA - Interest",
                                                 choices = c("Under expressed DEG", "Over expressed DEG"),
                                                 selected = NULL,
                                                 inline = TRUE),
@@ -220,42 +220,42 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                   tabPanel("Results (ORA)", 
                       fluidRow(style = "height: 600px;",
                            box(title = HTML("Bar Plot"),
-                               id = "goOraBarplot", width = 6, height = "575px",
-                               spinner(plotOutput("goBarplot", height = "575px"))
+                               id = "box_go_ora_barplot", width = 6, height = "575px",
+                               spinner(plotOutput("go_ora_barplot", height = "575px"))
                                ),
                            box(
                            title = HTML("Dot Plot"),
-                           id = "goOraDotplot", width = 6, height = "575px",
-                           spinner(plotOutput("goDotplot", height = "575px"))
+                           id = "box_go_ora_dotplot", width = 6, height = "575px",
+                           spinner(plotOutput("go_ora_dotplot", height = "575px"))
                            )),
                         fluidRow(style = "height: 600px;",
                           box(
                             title = HTML("Gene–Concept Network (microscopic view)"),
-                            id = "goOraNetplot", width = 6, height = "575px",
-                            spinner(plotOutput("goNetplot", height = "575px"))
+                            id = "box_go_ora_netplot", width = 6, height = "575px",
+                            spinner(plotOutput("go_ora_netplot", height = "575px"))
                           ),
                           box(
                             title = HTML("Enrichment Map (macroscopic overview)"),
-                            id = "goOraEmapPlot", width = 6, height = "575px",
-                            spinner(plotOutput("goEmapPlot", height = "575px"))
+                            id = "box_go_ora_emapplot", width = 6, height = "575px",
+                            spinner(plotOutput("go_ora_emapplot", height = "575px"))
                           )),
                       fluidRow(style = "height: 600px;",
                         box(title = HTML("Upset Plot"),
-                            id = "goOraUpsetplot", width = 12, height = "575px",
-                            spinner(plotOutput("goUpsetplot", height = "575px"))
+                            id = "box_go_ora_upsetplot", width = 12, height = "575px",
+                            spinner(plotOutput("go_ora_upsetplot", height = "575px"))
                         )),
                         fluidRow(
                           box(
                             title = HTML("Results Table"),
-                            id = "goOraTable", width = 12,
-                            spinner(DT::dataTableOutput("goTable"))
+                            id = "box_go_ora_table", width = 12,
+                            spinner(DT::dataTableOutput("go_ora_table"))
                           )
                         ),
                       fluidRow(
                         box(
                           title = HTML("Hierarchical network of enriched GO terms"),
-                          id = "goOrasigOfnodesplot", width = 12,
-                          spinner(plotOutput("gosigOfnodesplot",height = "1200px"))
+                          id = "box_go_ora_goplot", width = 12,
+                          spinner(plotOutput("go_ora_goplot",height = "1200px"))
                         )
                       )
                                 ),
@@ -264,56 +264,47 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                                   fluidRow(style = "height: 600px;",
                                     box(
                                       title = HTML("Ridge Plot"),
-                                      id = "goGseaRidgeplotBox", width = 6, height = "575px",
-                                      spinner(plotOutput("goGseaRidgeplot", height = "575px"))
+                                      id = "box_go_gsea_ridgeplot", width = 6, height = "575px",
+                                      spinner(plotOutput("go_gsea_ridgeplot", height = "575px"))
                                     ),
                                     box(
                                       title = HTML("Dot Plot"),
-                                      id = "goGseaDotplotBox", width = 6, height = "575px",
-                                      spinner(plotOutput("goGseaDotplot", height = "575px"))
+                                      id = "box_go_gsea_dotplot", width = 6, height = "575px",
+                                      spinner(plotOutput("go_gsea_dotplot", height = "575px"))
                                     )
                                   ),
                                   fluidRow(style = "height: 600px;",
                                     box(
                                       title = HTML("Gene–Concept Network (microscopic view)"),
-                                      id = "goGseaNetplot", width = 6, height = "575px",
-                                      spinner(plotOutput("goGseaNetplot", height = "575px"))
+                                      id = "box_go_gsea_netplot", width = 6, height = "575px",
+                                      spinner(plotOutput("go_gsea_netplot", height = "575px"))
                                     ),
                                     box(
                                       title = HTML("Enrichment Map (macroscopic overview)"),
-                                      id = "goGseaEmapplot", width = 6, height = "575px",
-                                      spinner(plotOutput("goGseaEmapPlot", height = "575px"))
+                                      id = "box_go_gsea_emapPlot", width = 6, height = "575px",
+                                      spinner(plotOutput("go_gsea_emapPlot", height = "575px"))
                                     )),
                                   fluidRow(style = "height: 600px;",
                                     box(title = HTML("Upset Plot"),
-                                       id = "goGseaUpsetplot", width = 12, height = "575px",
-                                       spinner(plotOutput("goGseaUpsetplot", height = "575px"))
+                                       id = "box_go_gsea_upsetplot", width = 12, height = "575px",
+                                       spinner(plotOutput("go_gsea_upsetplot", height = "575px"))
                                   )),
                                   fluidRow(
                                     box(
                                       title = HTML("GSEA Enrichment Plot"),
-                                      id = "goGseaEnrichmentBox", width = 12,
-                                      selectInput("goGSEA", "Select GO terms:", 
+                                      id = "box_go_gsea_enrichplot", width = 12,
+                                      selectInput("go_selected_gsea", "Select GO terms:", 
                                                   choices = c("None"), 
                                                   selected = "None", 
                                                   multiple = TRUE, 
                                                   width = "100%"),
-                                      spinner(plotOutput("goGseaPlot2", 
-                                                 height = "425px",
-                                                 click = "plot_click",
-                                                 dblclick = "plot_dblclick",
-                                                 hover = "plot_hover",
-                                                 brush = brushOpts(id = "plot_brush", 
-                                                                   delay = 3000, 
-                                                                   delayType = "debounce", 
-                                                                   fill = "#7e3535", 
-                                                                   stroke = "#7e3535")))
+                                      spinner(plotOutput("go_gsea_enrichplot", height = "425px"))
                                     )),
                                   fluidRow(
                                     box(
                                       title = HTML("Results Table"),
-                                      id = "goGseaTable", width = 12,
-                                      spinner(DT::dataTableOutput("goGseaTable"))
+                                      id = "box_go_gsea_table", width = 12,
+                                      spinner(DT::dataTableOutput("go_gsea_table"))
                                     )
                                   )
                         ),
@@ -335,13 +326,13 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                                                       inline = TRUE, width = NULL),
                                          conditionalPanel(
                                            condition = "input.analysisMethodChoice.includes('ORA')",
-                                           sliderInput("pathway_oraFC", label="ORA - Minimum Absolute Fold-Change (×) to be considered over- or under-enriched", value=1, step=0.01, min=1, max=4),
-                                          checkboxGroupInput("oraChoice", "ORA - Interest", choices = list("Under expressed DEG"="down", "Over expressed DEG"="up"), selected = NULL,
+                                           sliderInput("pathway_ora_fc", label="ORA - Minimum Absolute Fold-Change (×) to be considered over- or under-enriched", value=1, step=0.01, min=1, max=4),
+                                          checkboxGroupInput("pathway_ora_choice", "ORA - Interest", choices = list("Under expressed DEG"="down", "Over expressed DEG"="up"), selected = NULL,
                                                             inline = TRUE, width = NULL)),
                                           
                                          radioButtons("dbPathwaychoice", "Database choice", choices = c("Reactome", "KEGG"), selected = NULL,
                                                       inline = TRUE, width = NULL),
-                                         actionButton("analysisPathwayButton", "Start analysis", icon=icon('transfer', lib='glyphicon'))
+                                         actionButton("pathway_analysis_button", "Start analysis", icon=icon('transfer', lib='glyphicon'))
                                        ),
                                      )),
                                      tabPanel("Results (ORA)",
@@ -380,7 +371,7 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                                                            spinner(plotOutput("pathway_gsea_upsetplot",  height="575px")))),
                                                   fluidRow (
                                                     box(title = "EnrichPlot", width = 12, height="850px",
-                                                        selectInput("pathwayGSEA", "Select one or more pathways:", choices = c("None"), selected = "None", multiple=TRUE),
+                                                        selectInput("pathway_selected_gsea", "Select one or more pathways:", choices = c("None"), selected = "None", multiple=TRUE),
                                                         spinner(plotOutput("pathway_gsea_enrichplot", height = "425px")))),
                                                   fluidRow (
                                                     box(title = "Table", width = 12,
@@ -392,7 +383,7 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                                                 box(title = "Pathway visualisation", width = 12,
                                                 column(12,
                                                        selectInput("pathway", "Select a pathway:", choices = NULL))),
-                                                       spinner(imageOutput("pathwayImage", height = "600px")
+                                                       spinner(imageOutput("pathway_image", height = "600px")
                                                 )
                                               )
                                      ))),
@@ -400,10 +391,10 @@ dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='font-s
                   tabItem(tabName = "EXPORT",
                           fluidRow(
                             box(id = "export",  title="Export results", width = 12,
-                                uiOutput("exportOptions"),      
+                                uiOutput("export_options"),      
                                 conditionalPanel(
                                   condition = "input.export_choices && ((Array.isArray(input.export_choices) && (input.export_choices.includes('GO GSEA') || input.export_choices.includes('Pathway GSEA'))) || input.export_choices == 'GO GSEA' || input.export_choices == 'Pathway GSEA')",
-                                  checkboxInput("includeGSEAPlots", "Include all GSEA enrichplots",value = TRUE)
+                                  checkboxInput("include_gsea_plots", "Include all GSEA enrichplots", value = TRUE)
                                 )
                                 
                             )

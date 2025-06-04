@@ -12,26 +12,26 @@ params:
   organismInfo: "Unspecified"
   
   # Basic outputs
-  InfoSelect: NULL
-  volcanoPlot: NULL
+  info_select: NULL
+  volcano_plot: NULL
   table: NULL
   
   # GO ORA outputs
-  goBarplot: NULL
-  goDotplot: NULL
-  goNetplot: NULL
-  goEmapPlot: NULL
-  goTable: NULL
-  goUpsetplot: NULL
-  gosigOfnodesplot: NULL
+  go_ora_barplot: NULL
+  go_ora_dotplot: NULL
+  go_ora_netplot: NULL
+  go_ora_emapplot: NULL
+  go_ora_table: NULL
+  go_ora_upsetplot: NULL
+  go_ora_goplot: NULL
   
   # GO GSEA outputs  
-  goGseaUpsetplot: NULL
-  goGseaNetplot: NULL
-  goGseaDotplot: NULL
-  goGseaRidgeplot: NULL
-  goGseaTable: NULL
-  goGseaEmapPlot: NULL
+  go_gsea_upsetplot: NULL
+  go_gsea_netplot: NULL
+  go_gsea_dotplot: NULL
+  go_gsea_ridgeplot: NULL
+  go_gsea_table: NULL
+  go_gsea_emapPlot: NULL
   
   # Pathway ORA outputs
   pathway_ora_table: NULL
@@ -50,14 +50,14 @@ params:
   pathway_gsea_emapplot: NULL
   
   # Complex data objects
-  goOraResults: NULL
-  goGseaResults: NULL
-  pathwayGSEAEnrichment: NULL
-  pathwayORAEnrichment: NULL
-  preprocessedData: NULL
-  processedData: NULL
+  go_ora_results: NULL
+  go_gsea_results: NULL
+  pathway_gsea_enrichment: NULL
+  pathway_ora_enrichment: NULL
+  preprocessed_data: NULL
+  processed_data: NULL
   export_choices: NULL
-  includeGSEAPlots: NULL
+  include_gsea_plots: NULL
 ---
 
 <style>
@@ -629,7 +629,6 @@ knitr::opts_chunk$set(
   fig.width = 12, fig.height = 8
 )
 
-knitr::opts_knit$set(root.dir = here::here())
 options(knitr.graphics.rel_path = FALSE)
 
 library(ggplot2)
@@ -662,11 +661,11 @@ display_output <- function(obj, output_name) {
 The following report presents the results of the differential and enrichment analysis carried out with HEATraN on the organism: *`r params$organismInfo`*.
 
 ```{r basic_outputs, results='asis'}
-if (is.null(params$export_choices) || "Whole Data Inspection (VolcanoPlot + Table)" %in% params$export_choices) {
+if (is.null(params$export_choices) || "Whole Data Inspection (volcano_plot + Table)" %in% params$export_choices) {
   cat("# Whole Data Inspection\n\n")
   basic_outputs <- list(
-    "Selection information\n\n" = params$InfoSelect,
-    "Volcano Plot\n\n"            = params$volcanoPlot,
+    "Selection information\n\n" = params$info_select,
+    "Volcano Plot\n\n"            = params$volcano_plot,
     "Data table\n\n"       = params$table
   )
   for (output_name in names(basic_outputs)) {
@@ -685,15 +684,15 @@ if ("GO ORA" %in% params$export_choices || "GO GSEA" %in% params$export_choices)
 
 ```{r go_ora_results, results='asis'}
 if ("GO ORA" %in% params$export_choices) {
-  if (!is.null(params$goOraResults)) {
+  if (!is.null(params$go_ora_results)) {
     cat("## ORA\n\n")
     go_ora_outputs <- list(
-      "GO ORA Barplot\n\n"          = params$goBarplot,
-      "GO ORA Dotplot\n\n"          = params$goDotplot,
-      "GO ORA Enrichment map\n\n" = params$goEmapPlot,
-      "GO ORA Gene-Network plot\n\n"     = params$goNetplot,
-      "GO ORA Table\n\n"            = params$goTable,
-      "GO ORA Upset plot\n\n"       = params$goUpsetplot
+      "GO ORA Barplot\n\n"          = params$go_ora_barplot,
+      "GO ORA Dotplot\n\n"          = params$go_ora_dotplot,
+      "GO ORA Enrichment map\n\n" = params$go_ora_emapplot,
+      "GO ORA Gene-Network plot\n\n"     = params$go_ora_netplot,
+      "GO ORA Table\n\n"            = params$go_ora_table,
+      "GO ORA Upset plot\n\n"       = params$go_ora_upsetplot
     )
     for (output_name in names(go_ora_outputs)) {
       obj <- go_ora_outputs[[output_name]]
@@ -706,15 +705,15 @@ if ("GO ORA" %in% params$export_choices) {
 
 ```{r go_gsea_results, results='asis'}
 if ("GO GSEA" %in% params$export_choices) {
-  if (!is.null(params$goGseaResults)) {
+  if (!is.null(params$go_gsea_results)) {
     cat("## GSEA\n\n")
     go_gsea_outputs <- list(
-      "GO GSEA Upset plot\n\n"   = params$goGseaUpsetplot,
-      "GO GSEA Enrichment map\n\n" = params$goGseaEmapPlot,
-      "GO GSEA Gene-Network plot\n\n" = params$goGseaNetplot,
-      "GO GSEA Dotplot\n\n"      = params$goGseaDotplot,
-      "GO GSEA Ridge plot\n\n"   = params$goGseaRidgeplot,
-      "GO GSEA Table\n\n"        = params$goGseaTable
+      "GO GSEA Upset plot\n\n"   = params$go_gsea_upsetplot,
+      "GO GSEA Enrichment map\n\n" = params$go_gsea_emapPlot,
+      "GO GSEA Gene-Network plot\n\n" = params$go_gsea_netplot,
+      "GO GSEA Dotplot\n\n"      = params$go_gsea_dotplot,
+      "GO GSEA Ridge plot\n\n"   = params$go_gsea_ridgeplot,
+      "GO GSEA Table\n\n"        = params$go_gsea_table
     )
     for (output_name in names(go_gsea_outputs)) {
       obj <- go_gsea_outputs[[output_name]]
@@ -726,9 +725,9 @@ if ("GO GSEA" %in% params$export_choices) {
 ```
 
 ```{r go_gsea_individual_plots, results='asis', echo=FALSE, fig.width=10, fig.height=6}
-if (!is.null(params$goGseaResults) && isTRUE(params$includeGSEAPlots) && ("GO GSEA" %in% params$export_choices)) {
+if (!is.null(params$go_gsea_results) && isTRUE(params$include_gsea_plots) && ("GO GSEA" %in% params$export_choices)) {
   library(grid)
-    data <- params$goGseaResults
+    data <- params$go_gsea_results
     n_terms <- nrow(data@result)
     for (i in seq_len(n_terms)) {
       id <- data@result$ID[i]
@@ -750,9 +749,9 @@ if ("Pathway ORA" %in% params$export_choices || "Pathway GSEA" %in% params$expor
 ```
 
 ```{r pathway_results, results='asis'}
-if (!is.null(params$pathwayORAEnrichment) || !is.null(params$pathwayGSEAEnrichment)) {
+if (!is.null(params$pathway_ora_enrichment) || !is.null(params$pathway_gsea_enrichment)) {
   if ("Pathway ORA" %in% params$export_choices) {
-    if (!is.null(params$pathwayORAEnrichment)) {
+    if (!is.null(params$pathway_ora_enrichment)) {
       cat("## ORA\n\n")
       pathway_ora_outputs <- list(
         "Pathway ORA Table\n\n"            = params$pathway_ora_table,
@@ -769,7 +768,7 @@ if (!is.null(params$pathwayORAEnrichment) || !is.null(params$pathwayGSEAEnrichme
     }
   } 
   if ("Pathway GSEA" %in% params$export_choices) {
-    if (!is.null(params$pathwayGSEAEnrichment)) {
+    if (!is.null(params$pathway_gsea_enrichment)) {
       cat("## GSEA\n\n")
       pathway_gsea_outputs <- list(
         "Pathway GSEA Table\n\n"            = params$pathway_gsea_table,
@@ -792,17 +791,17 @@ if (!is.null(params$pathwayORAEnrichment) || !is.null(params$pathwayGSEAEnrichme
 library(grid)
 
 if ("Pathway GSEA" %in% params$export_choices) {
-  if (!is.null(params$pathwayGSEAEnrichment)) {
-    if (isTRUE(params$includeGSEAPlots)) {
+  if (!is.null(params$pathway_gsea_enrichment)) {
+    if (isTRUE(params$include_gsea_plots)) {
     cat("## Static visualisation – (GSEA)\n\n")
-    gsea_res = params$pathwayGSEAEnrichment$enrichment
+    gsea_res = params$pathway_gsea_enrichment$enrichment
     for (i in seq_len(nrow(gsea_res))) {
       id   <- gsea_res$ID[i]
       desc <- gsea_res$Description[i]
-      if (isTRUE(params$includeGSEAPlots)) {
+      if (isTRUE(params$include_gsea_plots)) {
       cat("### GSEA Pathway :", id, "–", desc, "\n\n")
       plt <- enrichplot::gseaplot2(
-        params$pathwayGSEAEnrichment$enrichment,
+        params$pathway_gsea_enrichment$enrichment,
         geneSetID    = i,
         pvalue_table = FALSE
       )

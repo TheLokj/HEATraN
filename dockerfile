@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     libpng-dev \
     libtiff5-dev \
     libjpeg-dev \
+    tini \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -67,21 +68,19 @@ WORKDIR /srv/shiny-server/HEATraN
 RUN mkdir -p bin data www
 
 # Copy of the application respecting the project structure
-COPY ./app.R ./
-COPY ./bin/ ./bin/
-COPY ./bin/fun/ ./bin/fun/
-COPY ./data/ ./data/
-COPY ./www/ ./www/
-COPY ./ ./
+COPY conf.ini ./
+COPY app.R ./
+COPY bin/ ./bin/
+COPY bin/fun/ ./bin/fun/
+COPY data/ ./data/
+COPY www/ ./www/
 
 # Setting permissions
-RUN chmod -R 755 .
+RUN chmod -R a+rX ./
 
 # Configuration to display detailed errors (debug)
 RUN echo "sanitize_errors false;" >> /etc/shiny-server/shiny-server.conf
 
-# Port exhibition for Shiny
 EXPOSE 3838
 
-# Start-up command
-CMD ["/usr/bin/shiny-server"]
+CMD ["Rscript", "./app.R"]

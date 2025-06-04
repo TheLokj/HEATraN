@@ -25,25 +25,25 @@ orgs = rbind(orgs, data.frame(organism="Saccharomyces cerevisiae", db="org.Sc.sg
 orgs = rbind(orgs, data.frame(organism="Danio rerio", db="org.Dr.eg.db", commonName="zebrafish", TLname="dre"))
 
 # Functions
-rankFC = function(data, colId){
-  rankedVec = data$Log2FC
-  names(rankedVec) = data[[colId]]
-  rankedVec = rankedVec[!is.na(names(rankedVec))]
-  rankedVec = tapply(rankedVec, names(rankedVec), mean)
-  rankedVec = sort(rankedVec, decreasing=T)
-  namesrV = names(rankedVec)
-  rankedVec = as.numeric(rankedVec)
-  names(rankedVec) = namesrV
-  return(rankedVec)
+rankFC = function(data, col_id){
+  ranked_vec = data$Log2FC
+  names(ranked_vec) = data[[col_id]]
+  ranked_vec = ranked_vec[!is.na(names(ranked_vec))]
+  ranked_vec = tapply(ranked_vec, names(ranked_vec), mean)
+  ranked_vec = sort(ranked_vec, decreasing=T)
+  namesrV = names(ranked_vec)
+  ranked_vec = as.numeric(ranked_vec)
+  names(ranked_vec) = namesrV
+  return(ranked_vec)
 }
 
-getKEGGpathway <- function(geneList, pathwayID, organism, local = TRUE) {
+get_kegg_pathway <- function(gene_list, pathway_id, organism, local = TRUE) {
   out_dir <- file.path(getwd(), "out")
   if (local && !dir.exists(out_dir)) {
     dir.create(out_dir, recursive = TRUE)
   }
   
-  base_name     <- paste0(pathwayID, ".pathview")
+  base_name     <- paste0(pathway_id, ".pathview")
   png_file      <- file.path(out_dir, paste0(base_name, ".png"))
   multi_png_file<- file.path(out_dir, paste0(base_name, ".multi.png"))
   
@@ -60,8 +60,8 @@ getKEGGpathway <- function(geneList, pathwayID, organism, local = TRUE) {
     
     tryCatch({
       pathview(
-        gene.data   = geneList,
-        pathway.id  = pathwayID,
+        gene.data   = gene_list,
+        pathway.id  = pathway_id,
         species     = organism,
         kegg.dir    = ".",
         gene.idtype = "KEGG"
@@ -85,21 +85,21 @@ getKEGGpathway <- function(geneList, pathwayID, organism, local = TRUE) {
     })
     
   } else {
-    browseKEGG(geneList, pathwayID)
+    browseKEGG(gene_list, pathway_id)
     return(NULL)
   }
 }
 
-getReactomePathway <- function(rankedLog2FC, pathwayIDs, pathwayDesc, organism) {
+get_reactome_pathway <- function(ranked_log2fc, pathway_ids, pathway_descs, organism) {
   if (!dir.exists("./out/")) {
     dir.create("./out/", recursive = TRUE)
   }
   
   pathway_images <- list()
   
-  for (i in seq_along(pathwayIDs)) {
-    pathway_id   <- pathwayIDs[i]
-    pathway_name <- pathwayDesc[i]
+  for (i in seq_along(pathway_ids)) {
+    pathway_id   <- pathway_ids[i]
+    pathway_name <- pathway_descs[i]
     
     safe_name <- gsub("[^a-zA-Z0-9]", "_", pathway_name)
     file_name <- paste0("./out/", safe_name, ".png")
@@ -133,7 +133,7 @@ getReactomePathway <- function(rankedLog2FC, pathwayIDs, pathwayDesc, organism) 
           pathway_id,
           organism = organism,
           readable = TRUE,
-          foldChange = rankedLog2FC
+          foldChange = ranked_log2fc
         )
         
         ggplot2::ggsave(file_name, p, width = 10, height = 8)
@@ -197,8 +197,8 @@ preprocessPathway = function(data, organism, DB){
 }
 
 
-pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", threshold=0, oraInterest = c("up", "down"), pval= 0.05){
-  parameters = list(organism=organism, DB=DB, analysis=analysis, pAdjustMethod=pAdjustMethod, threshold=threshold, oraInterest=oraInterest, pval=pval)
+pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", threshold=0, ora_interest = c("up", "down"), pval= 0.05){
+  parameters = list(organism=organism, DB=DB, analysis=analysis, pAdjustMethod=pAdjustMethod, threshold=threshold, ora_interest=ora_interest, pval=pval)
   
   if (analysis == "ORA"){
     message("Doing an over representation analysis on differentially expressed genes regarding their pathway.")
@@ -212,21 +212,21 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
     
     sig_genes_df <- as.data.frame(na.omit(background_data$genes[background_data$genes$padj < pval,]))
     #--- Filtration ---#
-    if ("up" %in% oraInterest & "down" %in% oraInterest) {
+    if ("up" %in% ora_interest & "down" %in% ora_interest) {
       message(paste("Analyzing DEG with a Log2FC < -", log2(threshold), " and > ", log2(threshold), ".", sep=""))
       filtered_data = sig_genes_df[abs(sig_genes_df$Log2FC) > log2(threshold),]
-    } else if (length(oraInterest) == 1 && oraInterest == "down"){
+    } else if (length(ora_interest) == 1 && ora_interest == "down"){
       message(paste("Analyzing DEG with a Log2FC < -", log2(threshold), ".", sep=""))
       filtered_data = sig_genes_df[sig_genes_df$Log2FC < -log2(threshold),]
-    } else if (length(oraInterest) == 1 && oraInterest == "up"){
+    } else if (length(ora_interest) == 1 && ora_interest == "up"){
       message(paste("Analyzing DEG with a Log2FC >", log2(threshold), ".", sep=""))
       filtered_data = sig_genes_df[sig_genes_df$Log2FC > log2(threshold),]
     } else {
       return()
     }
-    genesList = if(DB == "KEGG") filtered_data$KeggIds else filtered_data$ENTREZID
+    genes_list = if(DB == "KEGG") filtered_data$KeggIds else filtered_data$ENTREZID
 
-    ratio = (length(genesList) / length(background_data$universe))
+    ratio = (length(genes_list) / length(background_data$universe))
     message(paste("ORA: selected genes represent ", round(ratio*100,2), "% of Universe", sep=""))
     if (ratio > 0.1) {
       shinyalert("Statistical issue", text=paste("The genes selected for the ORA analysis represent more than 10% of the initial universe (", round(ratio*100, 2), "%), which can greatly distort and negatively impact the statistical analysis. Please increase the minimum fold change threshold or decrease the maximum p-value threshold.", sep=""), type = "error")
@@ -234,7 +234,7 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
     }
     #--- Analysis ---#
     if (DB == "KEGG"){
-      enrichment = enrichKEGG(genesList, 
+      enrichment = enrichKEGG(genes_list, 
                               organism=orgs[orgs$organism==organism, "TLname"], 
                               universe=background_data$universe, 
                               pvalueCutoff = pval, 
@@ -245,14 +245,14 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
       if ((!is.null(enrichment)) && (!is.null(enrichment@result)) && (nrow(enrichment@result) > 0)) {
         message(paste(nrow(enrichment), "enriched pathways"))
         pathway_images <- mapply(function(pathway_id) {
-          getKEGGpathway(enrichment@result[enrichment$ID == pathway_id, "geneID"], 
+          get_kegg_pathway(enrichment@result[enrichment$ID == pathway_id, "geneID"], 
                          pathway_id, 
                          organism=orgs[orgs$organism==organism, "TLname"], 
                          local=T)
         }, enrichment$ID, SIMPLIFY=FALSE)
       }
     } else if (DB == "Reactome"){
-      enrichment = enrichPathway(genesList, 
+      enrichment = enrichPathway(genes_list, 
                                  organism=orgs[orgs$organism==organism, "commonName"], 
                                  universe=background_data$universe, 
                                  pvalueCutoff = pval, 
@@ -262,13 +262,13 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
       pathway_images <- NULL
       if ((!is.null(enrichment)) && (!is.null(enrichment@result)) && (nrow(enrichment@result) > 0)) {
         message(paste(nrow(enrichment), "enriched pathways"))
-        pathway_images <- getReactomePathway(background_data$ranked,
+        pathway_images <- get_reactome_pathway(background_data$ranked,
                                              enrichment$ID,
                                              enrichment$Description,
                                              organism=orgs[orgs$organism==organism, "commonName"])
       }
     }
-    return(list(enrichment=enrichment, processedData = background_data, parameters=parameters, pathway_images=pathway_images))}
+    return(list(enrichment=enrichment, processed_data = background_data, parameters=parameters, pathway_images=pathway_images))}
   if (analysis == "GSEA"){
       message("Doing Gene Set Enrichment Analysis on differentially expressed genes regarding their pathway.")
     #--- Preprocess ---#
@@ -288,7 +288,7 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
       if ((!is.null(enrichment)) && (!is.null(enrichment@result)) && (nrow(enrichment@result) > 0)) {
         message(paste(nrow(enrichment), "enriched pathways"))
         pathway_images <- mapply(function(pathway_id) {
-          getKEGGpathway(enrichment@result[enrichment$ID == pathway_id, "core_enrichment"], 
+          get_kegg_pathway(enrichment@result[enrichment$ID == pathway_id, "core_enrichment"], 
                          pathway_id, 
                          organism=orgs[orgs$organism==organism, "TLname"], 
                          local=T)
@@ -304,14 +304,13 @@ pathway = function(data, organism, DB, analysis="GSEA", pAdjustMethod="BH", thre
       pathway_images <- NULL
       if ((!is.null(enrichment)) && (!is.null(enrichment@result)) && (nrow(enrichment@result) > 0)) {
         message(paste(nrow(enrichment), "enriched pathways"))  
-        pathway_images <- getReactomePathway(data$ranked,
+        pathway_images <- get_reactome_pathway(data$ranked,
                                                enrichment$ID,
                                                enrichment$Description,
                                                organism=orgs[orgs$organism==organism, "commonName"])
         }
     }
-    
-    return(list(enrichment=enrichment, processedData = data, parameters=parameters, pathway_images=pathway_images))
+    return(list(enrichment=enrichment, processed_data = data, parameters=parameters, pathway_images=pathway_images))
     }
 }
 
