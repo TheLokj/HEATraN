@@ -338,7 +338,7 @@ ui <- dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='
                                      tabPanel("Results (ORA)",
                                               fluidRow (style = "height: 600px;",
                                                 box(title = "Tree plot", width = 7, height="575px",
-                                                    spinner(plotOutput("pathway_ora_treeplot", height="575px"))),
+                                                      spinner(plotOutput("pathway_ora_treeplot", height="575px"))),
                                                 box(title = "Dot plot", width = 5, height="575px",
                                                     spinner(plotOutput("pathway_ora_dotplot", height="575px")))
                                                 ),
@@ -356,7 +356,7 @@ ui <- dashboardPage(skin="red", header = dashboardHeader(title= HTML("<b style='
                                      ),
                                      tabPanel("Results (GSEA)",
                                                 fluidRow (style = "height: 600px;",
-                                                  box(title = "Tree plot", width = 7, height="575px",
+                                                  box(title = "Tree plot", width = 7, height="575px", 
                                                       spinner(plotOutput("pathway_gsea_treeplot", height="575px"))),
                                                   box(title = "Dot plot", width = 5, height="575px",
                                                       spinner(plotOutput("pathway_gsea_dotplot",  height="575px")))

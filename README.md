@@ -17,11 +17,11 @@ Then, HEATraN can be launched using several ways.
 
 ### Online
 
-*Coming soon*
+You can access HEATraN online at: http://thelokj.shinyapps.io/HEATraN.
 
 ### Locally
 
-The two below methods allow you to access the tool by connecting to the local address http://localhost:3838/HEATraN/.
+The two below methods allow you to access the tool by connecting to the local address http://0.0.0.0:3838/HEATraN/.
 
 #### Docker
 
@@ -53,17 +53,22 @@ From a terminal, you can enter :
 | :-- | :-- |
 | R | 4.3.3 |
 | shiny | 1.10.0 |
-| shinyalert | 3.1.0 |
-| shinycssloaders | 1.1.0 |
 | shinydashboard | 0.7.3 |
+| shinydashboardPlus | 2.0.5 |
 | shinydisconnect | 0.1.1 |
 | shinyjs | 2.1.0 |
+| shinycssloaders | 1.1.0 |
+| shinyalert | 3.1.0 |
+| plyr | 1.8.9 |
+| dplyr | 1.1.4 |
+| data.table | 1.17.4 |
+| DT | 0.33 |
+| readxl | 1.4.5 |
+| ini | 0.3.1 |
 | fresh | 0.2.1 |
 | ggplot2 | 3.5.2 |
 | ggtext | 0.1.2 |
-| readxl | 1.4.5 |
-| data.table | 1.17.4 |
-| DT | 0.33 |
+| knitr | 1.5 |
 
 ##### Bioconductor Packages
 
@@ -71,9 +76,13 @@ From a terminal, you can enter :
 | :-- | :-- |
 | BiocManager | 1.30.23 |
 | BiocVersion | 3.18.1 |
-| ReactomePA | 1.46.0 |
+| topGO | 2.54.0 |
+| GO.db | 3.18.0 |
+| Rgraphviz | 2.46.0 |
 | clusterProfiler | 4.10.1 |
+| ReactomePA | 1.46.0 |
 | pathview | 1.42.0 |
+| enrichplot | 1.22.0 |
 | org.At.tair.db | 3.18.0 |
 | org.Bt.eg.db | 3.18.0 |
 | org.Cf.eg.db | 3.18.0 |
@@ -82,11 +91,11 @@ From a terminal, you can enter :
 | org.Gg.eg.db | 3.18.0 |
 | org.Hs.eg.db | 3.18.0 |
 | org.Mm.eg.db | 3.18.0 |
-| org.Rn.eg.db | 3.18.0 |
 | org.Ss.eg.db | 3.18.0 |
+| org.Rn.eg.db | 3.18.0 |
 | org.Ce.eg.db | 3.18.0 |
-| org.Sc.sgd.db | 3.18.0 |
 | org.Xl.eg.db | 3.18.0 |
+| org.Sc.sgd.db | 3.18.0 |
 | org.Dr.eg.db | 3.18.0 |
 
 If one of these packages does not install, make sure that all the required software libraries are installed:
@@ -119,6 +128,6 @@ HEATraN/
 
 To cite this project, please refers to:
 
-`Daher R., Naid El Djoudi L., Lesage L., Dauchel H. (2025). HEATraN. [https://github.com/TheLokj/HEATraN].`
+`Daher R., Naid El Djoudi L., Lesage L., Solène P., Dauchel H. (2025). HEATraN. [https://github.com/TheLokj/HEATraN].`
 
 Please also cite the authors of the packages used by HEATraN and listed above.

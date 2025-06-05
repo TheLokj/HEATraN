@@ -35,7 +35,7 @@ empty_plot <- ggplot() +
 
 empty_gsea_plot <- ggplot() + 
   geom_richtext(aes(x = 0.5, y = 0.5, 
-                    label = "<b style='font-family:Mulish,sans-serif;font-size:20pt;'>Please select a pathway</b>"), 
+                    label = "<b style='font-family:Mulish,sans-serif;font-size:20pt;'>Please select at least one pathway</b>"), 
                 size = 3, color = "red3", fill = NA, label.color = NA) +
   theme_void() +
   theme(panel.background = element_rect(fill = "white", color = NA))
@@ -274,7 +274,7 @@ server <- function(input, output, session) {
       if (!is.null(pathway_ora_enrichment())) {
         data = pathway_ora_enrichment()$enrichment
         dataR = setReadable(data, orgs[orgs$organism==input$species, "db"], 'ENTREZID')
-        plot = tryCatch({emapplot(pairwise_termsim(dataR), layout.params = list(layout = "kk"), showCategory = 15)}, error = function(e) { not_enough_data_plot })
+        plot = tryCatch({emapplot(pairwise_termsim(dataR), showCategory = 15)}, error = function(e) { not_enough_data_plot })
         return(plot)
       } else {
         return(empty_plot)
@@ -285,7 +285,7 @@ server <- function(input, output, session) {
       if (!is.null(pathway_gsea_enrichment())) {
         data = pathway_gsea_enrichment()$enrichment
         dataR = setReadable(data, orgs[orgs$organism==input$species, "db"], 'ENTREZID')
-        plot = tryCatch({emapplot(pairwise_termsim(dataR), layout.params = list(layout = "kk"), showCategory = 15)}, error = function(e) { not_enough_data_plot })
+        plot = tryCatch({emapplot(pairwise_termsim(dataR), showCategory = 15)}, error = function(e) { not_enough_data_plot })
         return(plot)
       } else {
         return(empty_plot)
@@ -759,7 +759,7 @@ server <- function(input, output, session) {
     message("GO: rendering Gene-Concept Network")
     if (!is.null(go_ora_results()$result)) {
       go_enrich <- pairwise_termsim(go_ora_results()$result)
-      cnetplot(go_enrich, layout.params = list(layout = "kk"), showCategory = 15)
+      cnetplot(go_enrich, showCategory = 15)
     } else {
       empty_plot
     }
@@ -769,7 +769,7 @@ server <- function(input, output, session) {
     message("GO: rendering ORA Enrichment Map")
     if (!(is.null(go_ora_results()))) {
       go_enrich <- pairwise_termsim(go_ora_results()$result)
-      tryCatch({emapplot(go_enrich, layout.params = list(layout = "kk"), showCategory = 15)}, error = function(e) { not_enough_data_plot })
+      tryCatch({emapplot(go_enrich, showCategory = 15)}, error = function(e) { not_enough_data_plot })
     } else { empty_plot }
   })
   
@@ -811,7 +811,7 @@ server <- function(input, output, session) {
     message("GO: rendering GSEA Gene-Concept Network")
     if (!(is.null(go_gsea_results()))) {
       go_enrich <- pairwise_termsim(go_gsea_results())
-      cnetplot(go_enrich, layout.params = list(layout = "kk"), showCategory = 15)
+      cnetplot(go_enrich, showCategory = 15)
     } else { empty_plot }
   })
   
@@ -819,7 +819,7 @@ server <- function(input, output, session) {
     message("GO: rendering GSEA Enrichment map")
     if (!(is.null(go_gsea_results()))) {
       go_enrich <- pairwise_termsim(go_gsea_results())
-      tryCatch({emapplot(go_enrich, layout.params = list(layout = "kk"), showCategory = 15)}, error = function(e) { not_enough_data_plot })
+      tryCatch({emapplot(go_enrich, showCategory = 15)}, error = function(e) { not_enough_data_plot })
     } else { empty_plot }
   })
   
@@ -1218,14 +1218,14 @@ server <- function(input, output, session) {
               go_ora_emapplot = tryCatch({
                 if (!is.null(go_ora_results()) && !is.null(go_ora_results()$result)) {
                   go_enrich <- pairwise_termsim(go_ora_results()$result)
-                  tryCatch({emapplot(pairwise_termsim(dataR), layout.params = list(layout = "kk"), showCategory = 15)}, error = function(e) { not_enough_data_plot })
+                  tryCatch({emapplot(pairwise_termsim(dataR), showCategory = 15)}, error = function(e) { not_enough_data_plot })
                 } else NULL
               }, error = function(e) NULL),
               
               go_ora_netplot = tryCatch({
                 if (!is.null(go_ora_results()) && !is.null(go_ora_results()$result)) {
                   go_enrich <- pairwise_termsim(go_ora_results()$result)
-                  tryCatch({emapplot(pairwise_termsim(dataR), layout.params = list(layout = "kk"), showCategory = 15)}, error = function(e) { not_enough_data_plot })
+                  tryCatch({emapplot(pairwise_termsim(dataR), showCategory = 15)}, error = function(e) { not_enough_data_plot })
                 } else NULL
               }, error = function(e) NULL),
               
@@ -1264,14 +1264,14 @@ server <- function(input, output, session) {
               go_gsea_netplot = tryCatch({
                 if (!is.null(go_gsea_results())) {
                   go_enrich <- pairwise_termsim(go_gsea_results())
-                  cnetplot(go_enrich, layout.params = list(layout = "kk"), showCategory = 15)
+                  cnetplot(go_enrich, showCategory = 15)
                 } else NULL
               }, error = function(e) NULL),
               
               go_gsea_emapPlot = tryCatch({
                 if (!is.null(go_gsea_results())) {
                   go_enrich <- pairwise_termsim(go_gsea_results())
-                  emapplot(go_enrich, layout.params = list(layout = "kk"), showCategory = 15)
+                  emapplot(go_enrich, showCategory = 15)
                 } else NULL
               }, error = function(e) NULL),
               
