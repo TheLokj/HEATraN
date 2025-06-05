@@ -4,7 +4,7 @@
 # louison.lesage@univ-rouen.fr
 # Students at Rouen Normandy University
 # Master of Bioinformatics, class M2.2 BIMS 2026 
-# Last updated : 04/06/2025
+# Last updated : 05/06/2025
 # HEATraN version 1.0.0
 
 config <- read.ini("./conf.ini")
@@ -639,7 +639,7 @@ server <- function(input, output, session) {
                 threshold = input$pathway_ora_fc
               )
               # 2. Test whether any enriched terms were returned
-              if (is.null(res) || (is.null(res$enrichment)) || nrow(res$enrichment@result) == 0) {
+              if (is.null(res) || (is.null(res$enrichment)) || length(res$enrichment$ID) == 0) {
                 # 3a. No enriched terms: set to NULL
                 shinyalert("No results for ORA", text="Check your significance and fold-change threshold, which may be too restrictive.", type = "error")
                 pathway_ora_enrichment(NULL)
@@ -665,7 +665,7 @@ server <- function(input, output, session) {
                 pval       = input$pvalPathway
               )
               
-              if (is.null(res) || (is.null(res$enrichment)) ||  nrow(res$enrichment@result) == 0) {
+              if (is.null(res) || (is.null(res$enrichment)) ||  length(res$enrichment$ID) == 0) {
                 shinyalert("No results for GSEA", text="Check your significance threshold, which may be too restrictive.", type = "error")
                 pathway_gsea_enrichment(NULL)
               } else {

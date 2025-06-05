@@ -4,7 +4,7 @@
 # louison.lesage@univ-rouen.fr
 # Students at Rouen Normandy University
 # Master of Bioinformatics, class M2.2 BIMS 2026 
-# Last updated : 04/06/2025
+# Last updated : 05/06/2025
 # HEATraN version 1.0.0
 
 pkgs <- c("shiny", "shinydashboard", "shinydashboardPlus", "shinyjs", "shinycssloaders", "shinyalert", "shinydashboardPlus",
@@ -52,3 +52,4 @@ app <- shinyApp(
 )
 
 runApp(app, host='0.0.0.0', port=3838)
+
